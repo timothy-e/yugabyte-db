@@ -41,6 +41,7 @@
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_yb_catalog_version.h"
+#include "catalog/pg_yb_role_profile.h"
 #include "catalog/toasting.h"
 #include "commands/defrem.h"
 #include "miscadmin.h"
@@ -254,7 +255,8 @@ IsSharedRelation(Oid relationId)
 		relationId == DbRoleSettingRelationId ||
 		relationId == ReplicationOriginRelationId ||
 		relationId == SubscriptionRelationId ||
-		relationId == YBCatalogVersionRelationId)
+		relationId == YBCatalogVersionRelationId ||
+		relationId == YbRoleProfileRelationId)
 		return true;
 	/* These are their indexes (see indexing.h) */
 	if (relationId == AuthIdRolnameIndexId ||
@@ -275,7 +277,8 @@ IsSharedRelation(Oid relationId)
 		relationId == ReplicationOriginNameIndex ||
 		relationId == SubscriptionObjectIndexId ||
 		relationId == SubscriptionNameIndexId ||
-		relationId == YBCatalogVersionDbOidIndexId)
+		relationId == YBCatalogVersionDbOidIndexId ||
+		relationId == YbRoleLoginOidIndexId)
 		return true;
 	/* These are their toast tables and toast indexes (see toasting.h) */
 	if (relationId == PgShdescriptionToastTable ||

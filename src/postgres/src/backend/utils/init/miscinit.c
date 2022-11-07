@@ -34,6 +34,8 @@
 
 #include "access/htup_details.h"
 #include "catalog/pg_authid.h"
+#include "catalog/pg_yb_role_profile.h"
+#include "commands/profile.h"
 #include "common/file_perm.h"
 #include "libpq/libpq.h"
 #include "mb/pg_wchar.h"
@@ -652,6 +654,22 @@ InitializeSessionUserId(const char *rolename, Oid roleid)
 					(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
 					 errmsg("role \"%s\" is not permitted to log in",
 							rname)));
+
+		if (IsYugaByteEnabled())
+		{
+			HeapTuple rolprftuple = get_role_profile_tuple(MyProc->roleId);
+			if (HeapTupleIsValid(rolprftuple))
+			{
+				Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile)
+									GETSTRUCT(rolprftuple);
+
+				if (!rolprfform->rolisenabled)
+					ereport(FATAL,
+							(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
+							 errmsg("role \"%s\" is not permitted to log in",
+									rname)));
+			}
+		}
 
 		/*
 		 * Check connection limit for this role.

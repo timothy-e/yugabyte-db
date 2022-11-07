@@ -1,0 +1,10 @@
+# src/test/regress/yb_login_profile_schedule
+#
+####################################################################################################
+# PROFILE Testsuite: All DDL Statments on Tablegroups
+# - CREATE
+# - DROP
+####################################################################################################
+test: yb_profile
+test: yb_role_profile
+test: yb_role_profile_disabled

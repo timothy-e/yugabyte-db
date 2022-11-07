@@ -140,3 +140,6 @@ DEFINE_test_flag(bool, yb_lwlock_crash_after_acquire_pg_stat_statements_reset, f
 
 DEFINE_test_flag(bool, yb_test_fail_matview_refresh_after_creation, false,
                  "Fail a refresh on a matview after the creation of a new relation.");
+
+DEFINE_bool(
+    ysql_feature_profile, false, "Whether to enable profiles feature for role auth");

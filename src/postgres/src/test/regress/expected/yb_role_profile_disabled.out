@@ -1,0 +1,27 @@
+--
+-- YB_ROLE_LOGIN_PROFILE Testsuite: Testing Statments for ALTER USER ...PROFILE DISABLED.
+--
+--
+-- pg_catalog alterations. Validate columns of pg_yb_role_profile and oids.
+--
+--
+-- CREATE PROFILE
+--
+CREATE PROFILE disabled_profile FAILED ATTEMPTS 3;
+CREATE USER disabled_user;
+-- Can connect when no profiles ae setup
+\c yugabyte disabled_user
+\c yugabyte yugabyte
+ALTER ROLE disabled_user PROFILE ATTACH disabled_profile;
+ALTER USER disabled_user PROFILE DISABLE;
+SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
+    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
+    JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
+ rolisenabled | rolfailedloginattempts |    rolname    |     prfname
+--------------+------------------------+---------------+------------------
+ f            |                      0 | disabled_user | disabled_profile
+(1 row)
+
+-- fail to connect if disabled
+\c yugabyte disabled_user
+\connect: FATAL:  role "disabled_user" is not permitted to log in
