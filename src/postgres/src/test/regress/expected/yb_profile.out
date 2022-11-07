@@ -1,0 +1,72 @@
+--
+-- YB_LOGIN_PROFILE Testsuite: Testing Statments for LOGIN PROFILES.
+--
+\h CREATE PROFILE
+No help available for "CREATE PROFILE".
+Try \h with no arguments to see available help.
+\h DROP PROFILE
+No help available for "DROP PROFILE".
+Try \h with no arguments to see available help.
+--
+-- pg_catalog alterations. Validate columns of pg_yb_profile and oids.
+--
+\d pg_yb_profile
+                  Table "pg_catalog.pg_yb_profile"
+         Column         |   Type   | Collation | Nullable | Default
+------------------------+----------+-----------+----------+---------
+ prfname                | name     |           | not null |
+ prffailedloginattempts | smallint |           | not null |
+ prfpasswordlocktime    | bigint   |           | not null |
+Indexes:
+    "pg_yb_profile_oid_index" PRIMARY KEY, lsm (oid ASC), tablespace "pg_global"
+Tablespace: "pg_global"
+
+SELECT oid, relname, reltype, relnatts FROM pg_class WHERE relname IN ('pg_yb_profile', 'pg_yb_profile_oid_index');
+ oid  |         relname         | reltype | relnatts
+------+-------------------------+---------+----------
+ 8051 | pg_yb_profile           |    8053 |        3
+ 8052 | pg_yb_profile_oid_index |       0 |        1
+(2 rows)
+
+SELECT oid, typname, typrelid FROM pg_type WHERE typname LIKE 'pg_yb_profile';
+ oid  |    typname    | typrelid
+------+---------------+----------
+ 8053 | pg_yb_profile |     8051
+(1 row)
+
+SELECT pg_describe_object('pg_yb_profile'::regclass::oid, oid, 0) FROM pg_yb_profile;
+ pg_describe_object
+--------------------
+ profile default
+(1 row)
+
+--
+-- CREATE PROFILE
+--
+SELECT oid, prfname, prffailedloginattempts FROM pg_catalog.pg_yb_profile ORDER BY oid;
+ oid  | prfname | prffailedloginattempts
+------+---------+------------------------
+ 8057 | default |                      0
+(1 row)
+
+CREATE PROFILE test_profile FAILED ATTEMPTS 3;
+SELECT prfname, prffailedloginattempts FROM pg_catalog.pg_yb_profile ORDER BY OID;
+   prfname    | prffailedloginattempts
+--------------+------------------------
+ default      |                      0
+ test_profile |                      3
+(2 rows)
+
+--Fail because it is a duplicate name
+CREATE PROFILE test_profile FAILED ATTEMPTS 4;
+ERROR:  profile "test_profile" already exists
+--
+-- DROP PROFILE
+--
+DROP PROFILE test_profile;
+-- fail: does not exist
+DROP PROFILE test_profile;
+ERROR:  profile "test_profile" does not exist
+-- fail: cannot delete default profile
+DROP PROFILE "default";
+ERROR:  profile "default" cannot be dropped

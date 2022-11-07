@@ -59,6 +59,8 @@
 #include "catalog/pg_ts_template.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_user_mapping.h"
+#include "catalog/pg_yb_profile.h"
+#include "catalog/pg_yb_role_profile.h"
 #include "catalog/pg_yb_tablegroup.h"
 #include "commands/comment.h"
 #include "commands/defrem.h"
@@ -66,6 +68,7 @@
 #include "commands/extension.h"
 #include "commands/policy.h"
 #include "commands/proclang.h"
+#include "commands/profile.h"
 #include "commands/publicationcmds.h"
 #include "commands/schemacmds.h"
 #include "commands/seclabel.h"
@@ -175,7 +178,9 @@ static const Oid object_classes[] = {
 	PublicationRelationId,		/* OCLASS_PUBLICATION */
 	PublicationRelRelationId,	/* OCLASS_PUBLICATION_REL */
 	SubscriptionRelationId,		/* OCLASS_SUBSCRIPTION */
-	TransformRelationId			/* OCLASS_TRANSFORM */
+	TransformRelationId,		/* OCLASS_TRANSFORM */
+	YbProfileRelationId,		/* OCLASS_PROFILE */
+	YbRoleProfileRelationId,	/* OCLASS_ROLE_PROFILE */
 };
 
 
@@ -1314,6 +1319,13 @@ doDeletion(const ObjectAddress *object, int flags)
 			RemoveTablegroupById(object->objectId);
 			break;
 
+		case OCLASS_PROFILE:
+			RemoveProfileById(object->objectId);
+			break;
+
+		case OCLASS_ROLE_PROFILE:
+			RemoveRoleProfileById(object->objectId);
+			break;
 			/*
 			 * These global object types are not supported here.
 			 */
@@ -2535,6 +2547,12 @@ getObjectClass(const ObjectAddress *object)
 
 		case DatabaseRelationId:
 			return OCLASS_DATABASE;
+
+		case YbProfileRelationId:
+			return OCLASS_PROFILE;
+
+		case YbRoleProfileRelationId:
+			return OCLASS_ROLE_PROFILE;
 
 		case YbTablegroupRelationId:
 			return OCLASS_TBLGROUP;

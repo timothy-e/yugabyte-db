@@ -58,11 +58,13 @@
 #include "catalog/pg_ts_template.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_user_mapping.h"
+#include "catalog/pg_yb_profile.h"
 #include "catalog/pg_yb_tablegroup.h"
 #include "commands/dbcommands.h"
 #include "commands/defrem.h"
 #include "commands/event_trigger.h"
 #include "commands/extension.h"
+#include "commands/profile.h"
 #include "commands/policy.h"
 #include "commands/proclang.h"
 #include "commands/tablespace.h"
@@ -503,6 +505,18 @@ static const ObjectPropertyType ObjectProperty[] =
 		InvalidAttrNumber,		/* no ACL (same as relation) */
 		OBJECT_STATISTIC_EXT,
 		true
+	},
+	{
+		YbProfileRelationId,
+		YbProfileOidIndexId,
+		-1,
+		-1,
+		Anum_pg_yb_profile_prfname,
+		InvalidAttrNumber,
+		InvalidAttrNumber,
+		InvalidAttrNumber,
+		OBJECT_PROFILE,
+		true
 	}
 };
 
@@ -732,6 +746,10 @@ static const struct object_type_map
 	/* OBJECT_STATISTIC_EXT */
 	{
 		"statistics object", OBJECT_STATISTIC_EXT
+	},
+	/* OBJECT_PROFILE */
+	{
+		"profile", OBJECT_PROFILE
 	}
 };
 
@@ -897,6 +915,7 @@ get_object_address(ObjectType objtype, Node *object,
 			case OBJECT_PUBLICATION:
 			case OBJECT_SUBSCRIPTION:
 			case OBJECT_YBTABLEGROUP:
+			case OBJECT_PROFILE:
 				address = get_object_address_unqualified(objtype,
 														 (Value *) object, missing_ok);
 				break;
@@ -1154,6 +1173,11 @@ get_object_address_unqualified(ObjectType objtype,
 		case OBJECT_EXTENSION:
 			address.classId = ExtensionRelationId;
 			address.objectId = get_extension_oid(name, missing_ok);
+			address.objectSubId = 0;
+			break;
+		case OBJECT_PROFILE:
+			address.classId = YbProfileRelationId;
+			address.objectId = get_profile_oid(name, missing_ok);
 			address.objectSubId = 0;
 			break;
 		case OBJECT_YBTABLEGROUP:
@@ -2159,6 +2183,7 @@ pg_get_object_address(PG_FUNCTION_ARGS)
 		case OBJECT_TABCONSTRAINT:
 		case OBJECT_OPCLASS:
 		case OBJECT_OPFAMILY:
+		case OBJECT_PROFILE:
 			objnode = (Node *) name;
 			break;
 		case OBJECT_ACCESS_METHOD:
@@ -2444,6 +2469,7 @@ check_object_ownership(Oid roleid, ObjectType objtype, ObjectAddress address,
 		case OBJECT_TSPARSER:
 		case OBJECT_TSTEMPLATE:
 		case OBJECT_ACCESS_METHOD:
+		case OBJECT_PROFILE:
 			/* We treat these object types as being owned by superusers */
 			if (!superuser_arg(roleid))
 				ereport(ERROR,
@@ -3623,6 +3649,28 @@ getObjectDescription(const ObjectAddress *object)
 				ReleaseSysCache(trfTup);
 				break;
 			}
+		case OCLASS_PROFILE:
+			{
+				char	   *profile;
+				profile = get_profile_name(object->objectId);
+				if (!profile)
+					elog(ERROR, "could not find tuple for profile %u",
+						 object->objectId);
+				appendStringInfo(&buffer, _("profile %s"), profile);
+				break;
+			}
+		case OCLASS_ROLE_PROFILE:
+			{
+				Oid roleid = get_role_oid_from_role_profile(object->objectId);
+				if (roleid == InvalidOid)
+					elog(ERROR, "could not find tuple for role profile %u",
+						 object->objectId);
+				appendStringInfo(&buffer, _("a profile is attached to role %s"),
+								 GetUserNameFromId(roleid, false));
+				break;
+			}
+
+
 
 			/*
 			 * There's intentionally no default: case here; we want the
@@ -4131,6 +4179,13 @@ getObjectTypeDescription(const ObjectAddress *object)
 			appendStringInfoString(&buffer, "transform");
 			break;
 
+		case OCLASS_PROFILE:
+			appendStringInfoString(&buffer, "profile");
+			break;
+
+		case OCLASS_ROLE_PROFILE:
+			appendStringInfoString(&buffer, "role profile");
+			break;
 			/*
 			 * There's intentionally no default: case here; we want the
 			 * compiler to warn if a new OCLASS hasn't been handled above.
@@ -5199,6 +5254,31 @@ getObjectIdentityParts(const ObjectAddress *object,
 				heap_close(transformDesc, AccessShareLock);
 			}
 			break;
+		case OCLASS_PROFILE:
+			{
+				char	   *profile;
+				profile = get_profile_name(object->objectId);
+				if (!profile)
+					elog(ERROR, "cache lookup failed for profile %u",
+						 object->objectId);
+				if (objname)
+					*objname = list_make1(profile);
+				appendStringInfoString(&buffer,
+									   quote_identifier(profile));
+				break;
+			}
+		case OCLASS_ROLE_PROFILE:
+			{
+				Oid roleid = get_role_oid_from_role_profile(object->objectId);
+				if (roleid == InvalidOid)
+					elog(ERROR, "cache lookup failed for role profile %u",
+						 object->objectId);
+				appendStringInfo(&buffer, _("profile for role %s"),
+								 GetUserNameFromId(object->objectId, false));
+				break;
+			}
+
+
 
 			/*
 			 * There's intentionally no default: case here; we want the
