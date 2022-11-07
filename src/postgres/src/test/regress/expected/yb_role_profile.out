@@ -1,0 +1,116 @@
+--
+-- YB_ROLE_LOGIN_PROFILE Testsuite: Testing Statments for ALTER USER ...PROFILE.
+--
+--
+-- pg_catalog alterations. Validate columns of pg_yb_role_profile and oids.
+--
+\d pg_yb_role_profile
+               Table "pg_catalog.pg_yb_role_profile"
+         Column         |   Type   | Collation | Nullable | Default
+------------------------+----------+-----------+----------+---------
+ rolisenabled           | boolean  |           | not null |
+ rolid                  | oid      |           | not null |
+ prfid                  | oid      |           | not null |
+ rolfailedloginattempts | smallint |           | not null |
+ rollockedat            | bigint   |           | not null |
+Indexes:
+    "pg_yb_role_profile_oid_index" PRIMARY KEY, lsm (rolid ASC), tablespace "pg_global"
+Tablespace: "pg_global"
+
+SELECT oid, relname, reltype, relnatts FROM pg_class WHERE relname IN ('pg_yb_role_profile', 'pg_yb_role_profile_oid_index');
+ oid  |           relname            | reltype | relnatts
+------+------------------------------+---------+----------
+ 8054 | pg_yb_role_profile           |    8056 |        5
+ 8055 | pg_yb_role_profile_oid_index |       0 |        1
+(2 rows)
+
+SELECT oid, typname, typrelid FROM pg_type WHERE typname LIKE 'pg_yb_role_profile';
+ oid  |      typname       | typrelid
+------+--------------------+----------
+ 8056 | pg_yb_role_profile |     8054
+(1 row)
+
+--
+-- CREATE PROFILE
+--
+CREATE PROFILE test_profile FAILED ATTEMPTS 3;
+CREATE USER restricted_user;
+-- Can connect when no profiles ae setup
+\c yugabyte restricted_user
+\c yugabyte yugabyte
+SELECT prfname, prffailedloginattempts FROM pg_catalog.pg_yb_profile ORDER BY OID;
+   prfname    | prffailedloginattempts
+--------------+------------------------
+ default      |                      0
+ test_profile |                      3
+(2 rows)
+
+SELECT rolname from pg_catalog.pg_roles WHERE rolname = 'restricted_user';
+     rolname
+-----------------
+ restricted_user
+(1 row)
+
+ALTER USER restricted_user PROFILE ATTACH test_profile;
+-- Can connect when attached to a profile with default values
+\c yugabyte restricted_user
+\c yugabyte yugabyte
+SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
+    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
+    JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
+ rolisenabled | rolfailedloginattempts |     rolname     |   prfname
+--------------+------------------------+-----------------+--------------
+ t            |                      0 | restricted_user | test_profile
+(1 row)
+
+ALTER USER restricted_user PROFILE DISABLE;
+SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
+    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
+    JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
+ rolisenabled | rolfailedloginattempts |     rolname     |   prfname
+--------------+------------------------+-----------------+--------------
+ f            |                      0 | restricted_user | test_profile
+(1 row)
+
+ALTER USER restricted_user PROFILE ENABLE;
+SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
+    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
+    JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
+ rolisenabled | rolfailedloginattempts |     rolname     |   prfname
+--------------+------------------------+-----------------+--------------
+ t            |                      0 | restricted_user | test_profile
+(1 row)
+
+-- Can connect when attached to a profile and profile is enabled
+\c yugabyte restricted_user
+\c yugabyte yugabyte
+-- fail: Cannot attache a role that has already been attached
+ALTER USER restricted_user PROFILE ATTACH test_profile;
+ERROR:  role "restricted_user" is associated with a profile
+-- faile: Cannot drop a profile or role that has been attached
+DROP PROFILE test_profile;
+ERROR:  cannot drop profile test_profile because other objects depend on it
+DETAIL:  a profile is attached to role restricted_user depends on profile test_profile
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+DROP USER restricted_user;
+ERROR:  role "restricted_user" cannot be dropped because some objects depend on it
+DETAIL:  owner of a profile is attached to role restricted_user
+-- Detach a role
+ALTER USER restricted_user PROFILE DETACH;
+SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
+    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
+    JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
+ rolisenabled | rolfailedloginattempts | rolname | prfname
+--------------+------------------------+---------+---------
+(0 rows)
+
+--fail: cannot enable/disable a role that is not attached
+ALTER USER restricted_user PROFILE ENABLE;
+ERROR:  role "restricted_user" is not associated with a profile
+ALTER USER restricted_user PROFILE DISABLE;
+ERROR:  role "restricted_user" is not associated with a profile
+--fail: Cannot attach to a non-existent profile
+ALTER USER restricted_user PROFILE ATTACH non_existent;
+ERROR:  profile "non_existent" does not exist
+DROP USER restricted_user;
+DROP PROFILE test_profile;

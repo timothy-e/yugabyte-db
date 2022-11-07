@@ -4072,6 +4072,16 @@ _copyDiscardStmt(const DiscardStmt *from)
 	return newnode;
 }
 
+static CreateProfileStmt *
+_copyCreateProfileStmt(const CreateProfileStmt *from)
+{
+	CreateProfileStmt *newnode = makeNode(CreateProfileStmt);
+
+	COPY_STRING_FIELD(prfname);
+	COPY_SCALAR_FIELD(prffailedloginattempts);
+	return newnode;
+}
+
 static CreateTableGroupStmt *
 _copyCreateTableGroupStmt(const CreateTableGroupStmt *from)
 {
@@ -5510,6 +5520,9 @@ copyObjectImpl(const void *from)
 			break;
 		case T_DiscardStmt:
 			retval = _copyDiscardStmt(from);
+			break;
+		case T_CreateProfileStmt:
+			retval = _copyCreateProfileStmt(from);
 			break;
 		case T_CreateTableGroupStmt:
 			retval = _copyCreateTableGroupStmt(from);

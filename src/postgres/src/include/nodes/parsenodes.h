@@ -1671,6 +1671,7 @@ typedef enum ObjectType
 	OBJECT_OPFAMILY,
 	OBJECT_POLICY,
 	OBJECT_PROCEDURE,
+	OBJECT_PROFILE,
 	OBJECT_PUBLICATION,
 	OBJECT_PUBLICATION_REL,
 	OBJECT_ROLE,
@@ -2184,6 +2185,18 @@ typedef struct OptSplit
 	int num_tablets;
 	List *split_points;
 } OptSplit;
+
+/* ----------------------
+ *		Create/Drop Profile Statements
+ * ----------------------
+ */
+
+typedef struct CreateProfileStmt
+{
+	NodeTag type;
+	char   *prfname;
+	Value  *prffailedloginattempts;
+} CreateProfileStmt;
 
 /* ----------------------
  *		Create/Drop Tablegroup Statements

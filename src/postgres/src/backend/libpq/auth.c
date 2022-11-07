@@ -19,10 +19,14 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include "commands/dbcommands.h"
+#include "executor/ybcModifyTable.h"
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif
 
+#include "access/htup_details.h"
+#include "commands/profile.h"
 #include "commands/user.h"
 #include "common/ip.h"
 #include "common/md5.h"
@@ -34,10 +38,12 @@
 #include "libpq/scram.h"
 #include "miscadmin.h"
 #include "port/pg_bswap.h"
+#include "pgstat.h"
 #include "replication/walsender.h"
 #include "storage/ipc.h"
 #include "utils/backend_random.h"
 #include "utils/builtins.h"
+#include "utils/syscache.h"
 #include "utils/timestamp.h"
 
 #include "pg_yb_utils.h"
@@ -355,6 +361,21 @@ auth_failed(Port *port, int status, char *logdetail)
 }
 
 
+static int
+track_login_attempts(Port* port, int status)
+{
+	HeapTuple roleTup;
+	/* Get role info from pg_authid */
+	roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
+	if (HeapTupleIsValid(roleTup))
+	{
+		Oid roleid = HeapTupleGetOid(roleTup);
+		elog(LOG, "Place holder to track login attempt for %d", roleid);
+		ReleaseSysCache(roleTup);
+	}
+	return status;
+}
+
 /*
  * Client authentication starts here.  If there is an error, this
  * function does not return and the backend process is terminated.
@@ -570,11 +591,11 @@ ClientAuthentication(Port *port)
 
 		case uaMD5:
 		case uaSCRAM:
-			status = CheckPWChallengeAuth(port, &logdetail);
+			status = track_login_attempts(port, CheckPWChallengeAuth(port, &logdetail));
 			break;
 
 		case uaPassword:
-			status = CheckPasswordAuth(port, &logdetail);
+			status = track_login_attempts(port, CheckPasswordAuth(port, &logdetail));
 			break;
 
 		case uaYbTserverKey:
@@ -628,10 +649,38 @@ ClientAuthentication(Port *port)
 	if (ClientAuthentication_hook)
 		(*ClientAuthentication_hook) (port, status);
 
+	HeapTuple roleTup;
+	/* Get role info from pg_authid */
+	roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
 	if (status == STATUS_OK)
+	{
+		if (HeapTupleIsValid(roleTup))
+		{
+			Oid roleid = HeapTupleGetOid(roleTup);
+			ReleaseSysCache(roleTup);
+			YBCResetFailedAttemptsIfAllowed(roleid);
+		}
+		else
+		{
+			ReleaseSysCache(roleTup);
+		}
 		sendAuthRequest(port, AUTH_REQ_OK, NULL, 0);
+	}
 	else
+	{
+		// Oid database_oid = 1; // get_database_oid(port->database_name, false);
+		if (HeapTupleIsValid(roleTup))
+		{
+			Oid roleid = HeapTupleGetOid(roleTup);
+			ReleaseSysCache(roleTup);
+			YBCIncFailedAttemptsAndMaybeDisableProfile(roleid);
+		}
+		else
+		{
+			ReleaseSysCache(roleTup);
+		}
 		auth_failed(port, status, logdetail);
+	}
 }
 
 
@@ -880,7 +929,7 @@ CheckMD5Auth(Port *port, char *shadow_pass, char **logdetail)
 		result = STATUS_ERROR;
 
 	pfree(passwd);
-
+	elog(LOG, "Auth succeeded? %d", result == STATUS_OK);
 	return result;
 }
 
