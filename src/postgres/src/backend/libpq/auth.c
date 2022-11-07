@@ -23,6 +23,9 @@
 #include <sys/select.h>
 #endif
 
+#include "access/htup_details.h"
+#include "catalog/pg_yb_role_profile.h"
+#include "commands/profile.h"
 #include "commands/user.h"
 #include "common/ip.h"
 #include "common/md5.h"
@@ -38,6 +41,7 @@
 #include "storage/ipc.h"
 #include "utils/backend_random.h"
 #include "utils/builtins.h"
+#include "utils/syscache.h"
 #include "utils/timestamp.h"
 
 #include "pg_yb_utils.h"
@@ -627,6 +631,54 @@ ClientAuthentication(Port *port)
 
 	if (ClientAuthentication_hook)
 		(*ClientAuthentication_hook) (port, status);
+
+	// Check Profile for the user only if the feature is enabled
+	if (*YBCGetGFlags()->ysql_enable_profile)
+	{
+		bool profileisdisabled = false;
+		HeapTuple roleTup, profileTuple = NULL;
+		/* Get role info from pg_authid */
+		roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
+		Oid roleid = InvalidOid;
+		if (HeapTupleIsValid(roleTup))
+		{
+			roleid = HeapTupleGetOid(roleTup);
+			profileTuple = get_role_profile_tuple(roleid);
+			if (HeapTupleIsValid(profileTuple))
+			{
+				Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile)
+											GETSTRUCT(profileTuple);
+				if (!rolprfform->rolisenabled)
+				{
+					profileisdisabled = true;
+				}
+			}
+		}
+		ReleaseSysCache(roleTup);
+
+		/*
+		* If we're trying to log in to a user that has exceeded the 
+		* failed login attempts, shut it down.
+		*/
+
+		if (status == STATUS_OK && !profileisdisabled)
+		{
+			if (roleid != InvalidOid)
+			{
+				YBCResetFailedAttemptsIfAllowed(roleid);
+			}
+			sendAuthRequest(port, AUTH_REQ_OK, NULL, 0);
+		}
+		else
+		{
+			if (roleid != InvalidOid)
+			{
+				YBCIncFailedAttemptsAndMaybeDisableProfile(roleid);
+			}
+			auth_failed(port, status, logdetail);
+		}
+		return;
+	}
 
 	if (status == STATUS_OK)
 		sendAuthRequest(port, AUTH_REQ_OK, NULL, 0);
