@@ -53,6 +53,7 @@ extern void RemoveProfileById(Oid prf_oid);
 extern Oid CreateRoleProfile(Oid rolid, const char* profile);
 extern Oid EnableRoleProfile(Oid roleid, bool isEnabled);
 extern Oid IncAndDisableProfileMaybe(Oid roleid);
+extern Oid ResetFailedAttemptsCounter(Oid roleid);
 
 extern Oid	 get_role_profile_oid(Oid rolid, bool missing_ok);
 extern HeapTuple get_role_profile_tuple(Oid rolid);

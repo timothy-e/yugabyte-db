@@ -67,6 +67,7 @@
 #include "catalog/schemapg.h"
 #include "catalog/storage.h"
 #include "catalog/yb_catalog_version.h"
+#include "catalog/pg_yb_profile.h"
 #include "catalog/pg_yb_role_profile.h"
 #include "commands/dbcommands.h"
 #include "commands/policy.h"
@@ -115,6 +116,7 @@ static const FormData_pg_attribute Desc_pg_auth_members[Natts_pg_auth_members] =
 static const FormData_pg_attribute Desc_pg_index[Natts_pg_index] = {Schema_pg_index};
 static const FormData_pg_attribute Desc_pg_shseclabel[Natts_pg_shseclabel] = {Schema_pg_shseclabel};
 static const FormData_pg_attribute Desc_pg_subscription[Natts_pg_subscription] = {Schema_pg_subscription};
+static const FormData_pg_attribute Desc_pg_yb_profile[Natts_pg_yb_profile] = {Schema_pg_yb_profile};
 static const FormData_pg_attribute Desc_pg_yb_role_profile[Natts_pg_yb_role_profile] = {Schema_pg_yb_role_profile};
 
 /*
@@ -1938,6 +1940,7 @@ YBPreloadRelCache()
 	YbRegisterSysTableForPrefetching(TypeRelationId);                  // pg_type
 	YbRegisterSysTableForPrefetching(NamespaceRelationId);             // pg_namespace
 	YbRegisterSysTableForPrefetching(AuthIdRelationId);                // pg_authid
+	YbRegisterSysTableForPrefetching(YbProfileRelationId);             // yb_pg_profile
 	YbRegisterSysTableForPrefetching(YbRoleProfileRelationId);         // yb_pg_role_profile
 
 	if (!YBIsDBConnectionValid())
@@ -4109,6 +4112,7 @@ RelationBuildLocalRelation(const char *relname,
 		case AttributeRelationId:
 		case ProcedureRelationId:
 		case TypeRelationId:
+		case YbProfileRelationId:
 		case YbRoleProfileRelationId:
 			nailit = true;
 			break;
@@ -4510,10 +4514,12 @@ RelationCacheInitializePhase2(void)
 				  false, Natts_pg_shseclabel, Desc_pg_shseclabel);
 		formrdesc("pg_subscription", SubscriptionRelation_Rowtype_Id, true,
 				  true, Natts_pg_subscription, Desc_pg_subscription);
+		formrdesc("pg_yb_profile", YbProfileRelation_Rowtype_Id, true,
+				  true, Natts_pg_yb_profile, Desc_pg_yb_profile);
 		formrdesc("pg_yb_role_profile", YbRoleProfileRelation_Rowtype_Id, true,
 				  false, Natts_pg_yb_role_profile, Desc_pg_yb_role_profile);
 
-#define NUM_CRITICAL_SHARED_RELS	6	/* fix if you change list above */
+#define NUM_CRITICAL_SHARED_RELS	7	/* fix if you change list above */
 	}
 
 	MemoryContextSwitchTo(oldcxt);

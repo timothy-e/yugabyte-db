@@ -427,33 +427,38 @@ get_role_profile_oid(Oid rolid, bool missing_ok)
  */
 Oid
 update_role_profile(Oid roleid, Datum *new_record,
-		bool* new_record_nulls, bool* new_record_repl)
+		bool* new_record_nulls, bool* new_record_repl,
+		bool missing_ok)
 {
 	Relation	 pg_yb_role_profile_rel;
-	TupleDesc	pg_yb_role_profile_dsc;
-	HeapTuple	 tuple, new_tuple;
+	//TupleDesc	pg_yb_role_profile_dsc;
+	HeapTuple	 tuple;//, new_tuple;
 	Oid roleprfid;
 
 	pg_yb_role_profile_rel = heap_open(YbRoleProfileRelationId, RowExclusiveLock);
-	pg_yb_role_profile_dsc = RelationGetDescr(pg_yb_role_profile_rel);
+	//pg_yb_role_profile_dsc = RelationGetDescr(pg_yb_role_profile_rel);
 
 	tuple = get_role_profile_tuple(roleid);
 
 	/* We assume that there can be at most one matching tuple */
 	if (HeapTupleIsValid(tuple))
+	{
 		roleprfid = HeapTupleGetOid(tuple);
-	else
+/*		new_tuple = heap_modify_tuple(tuple, pg_yb_role_profile_dsc, new_record,
+								  new_record_nulls, new_record_repl);
+		CatalogTupleUpdate(pg_yb_role_profile_rel, &tuple->t_self, new_tuple);
+
+		InvokeObjectPostAlterHook(YbRoleProfileRelationId, roleprfid, 0);
+
+		heap_freetuple(new_tuple);
+*/
+	}
+	else if (!missing_ok)
 		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
 						errmsg("role \"%d\" is not associated with a profile",
 							roleid)));
-
-	new_tuple = heap_modify_tuple(tuple, pg_yb_role_profile_dsc, new_record,
-								  new_record_nulls, new_record_repl);
-	CatalogTupleUpdate(pg_yb_role_profile_rel, &tuple->t_self, new_tuple);
-
-	InvokeObjectPostAlterHook(YbRoleProfileRelationId, roleprfid, 0);
-
-	heap_freetuple(new_tuple);
+	else
+		roleprfid = InvalidOid;
 
 	/*
 	 * Close pg_yb_role_login, but keep lock till commit.
@@ -488,16 +493,17 @@ EnableRoleProfile(Oid roleid, bool isEnabled)
 	new_record[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = Int16GetDatum(0);
 	new_record_repl[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = true;
 
-	return update_role_profile(roleid, new_record, new_record_nulls, new_record_repl);
+	return update_role_profile(roleid, new_record, new_record_nulls, 
+			new_record_repl, false);
 }
 
 /*
- * ResetFailedAttempts - reset failed_attempts counter
+ * ResetFailedAttemptsCounter - reset failed_attempts counter
  *
  * roleid - the oid of the role
  */
 Oid
-ResetFailedAttempts(Oid roleid)
+ResetFailedAttemptsCounter(Oid roleid)
 {
 	Datum		new_record[Natts_pg_yb_role_profile];
 	bool		new_record_nulls[Natts_pg_yb_role_profile];
@@ -513,7 +519,8 @@ ResetFailedAttempts(Oid roleid)
 	new_record[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = Int16GetDatum(0);
 	new_record_repl[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = true;
 
-	return update_role_profile(roleid, new_record, new_record_nulls, new_record_repl);
+	return update_role_profile(roleid, new_record, new_record_nulls, 
+			new_record_repl, true);
 }
 
 /*
@@ -539,14 +546,14 @@ IncAndDisableProfileMaybe(Oid roleid)
 	HeapTuple rolprftuple = get_role_profile_tuple(roleid);
 
 	if (!HeapTupleIsValid(rolprftuple))
-		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
-						errmsg("role \"%d\" is not associated with a profile", 
-							roleid)));
+		// Role is not associated with a profile.
+		return InvalidOid;
 
 	Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile)
 									GETSTRUCT(rolprftuple);
 
-	HeapTuple prftuple = get_profile_tuple(rolprfform->prfid);
+	elog(INFO, "Looking for profile %d", DatumGetObjectId(rolprfform->prfid));
+	HeapTuple prftuple = get_profile_tuple(DatumGetObjectId(rolprfform->prfid));
 	if (!HeapTupleIsValid(prftuple))
 		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
 						errmsg("Profile \"%d\" not found!", 
@@ -568,7 +575,8 @@ IncAndDisableProfileMaybe(Oid roleid)
 				(failed_attempts <= failed_attempts_limit));
 	new_record_repl[Anum_pg_yb_role_profile_rolisenabled - 1] = true;
 
-	return update_role_profile(roleid, new_record, new_record_nulls, new_record_repl);
+	return update_role_profile(roleid, new_record, new_record_nulls, 
+			new_record_repl, true);
 }
 
 /*

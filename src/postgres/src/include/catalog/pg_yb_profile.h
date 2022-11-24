@@ -25,7 +25,7 @@
  *		typedef struct FormData_pg_yb_profile
  * ----------------
  */
-CATALOG(pg_yb_profile,8049,YbProfileRelationId) BKI_ROWTYPE_OID(8051,YbProfileRelation_Rowtype_Id) BKI_SCHEMA_MACRO
+CATALOG(pg_yb_profile,8049,YbProfileRelationId) BKI_SHARED_RELATION BKI_ROWTYPE_OID(8051,YbProfileRelation_Rowtype_Id) BKI_SCHEMA_MACRO
 {
 	NameData	prfname;		/* profile name */
 	int16		prffailedloginattempts;		/* no. of attempts allowed */

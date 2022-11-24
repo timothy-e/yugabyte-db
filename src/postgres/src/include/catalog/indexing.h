@@ -369,9 +369,9 @@ DECLARE_UNIQUE_INDEX(pg_yb_catalog_version_db_oid_index, 8012, on pg_yb_catalog_
 #define YBCatalogVersionDbOidIndexId 8012
 
 DECLARE_UNIQUE_INDEX(pg_yb_profile_oid_index, 8050, on pg_yb_profile using btree(oid oid_ops));
-#define YbProfileLoginOidIndexId 8050
+#define YbProfileOidIndexId 8050
 
 DECLARE_UNIQUE_INDEX(pg_yb_role_profile_oid_index, 8053, on pg_yb_role_profile using btree(rolid oid_ops));
-#define YbRoleLoginOidIndexId 8053
+#define YbRoleProfileOidIndexId 8053
 
 #endif							/* INDEXING_H */

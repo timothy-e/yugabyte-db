@@ -508,7 +508,7 @@ static const ObjectPropertyType ObjectProperty[] =
 	},
 	{
 		YbProfileRelationId,
-		YbProfileLoginOidIndexId,
+		YbProfileOidIndexId,
 		-1,
 		-1,
 		Anum_pg_yb_profile_prfname,

@@ -23,6 +23,8 @@
 #include <sys/select.h>
 #endif
 
+#include "access/htup_details.h"
+#include "commands/profile.h"
 #include "commands/user.h"
 #include "common/ip.h"
 #include "common/md5.h"
@@ -38,6 +40,7 @@
 #include "storage/ipc.h"
 #include "utils/backend_random.h"
 #include "utils/builtins.h"
+#include "utils/syscache.h"
 #include "utils/timestamp.h"
 
 #include "pg_yb_utils.h"
@@ -355,6 +358,37 @@ auth_failed(Port *port, int status, char *logdetail)
 }
 
 
+static int
+track_login_attempts(Port* port, int status)
+{
+	if (status == STATUS_ERROR)
+	{
+		HeapTuple roleTup;
+		/* Get role info from pg_authid */
+		roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
+		if (HeapTupleIsValid(roleTup))
+		{
+			//Oid roleid = HeapTupleGetOid(roleTup);
+			//IncAndDisableProfileMaybe(roleid);
+			ReleaseSysCache(roleTup);
+		}
+	}
+	else if(status == STATUS_OK)
+	{
+		HeapTuple roleTup;
+		/* Get role info from pg_authid */
+		roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
+		if (HeapTupleIsValid(roleTup))
+		{
+			Oid roleid = HeapTupleGetOid(roleTup);
+			ResetFailedAttemptsCounter(roleid);
+			ReleaseSysCache(roleTup);
+		}
+
+	}
+	return status;
+}
+
 /*
  * Client authentication starts here.  If there is an error, this
  * function does not return and the backend process is terminated.
@@ -570,11 +604,11 @@ ClientAuthentication(Port *port)
 
 		case uaMD5:
 		case uaSCRAM:
-			status = CheckPWChallengeAuth(port, &logdetail);
+			status = track_login_attempts(port, CheckPWChallengeAuth(port, &logdetail));
 			break;
 
 		case uaPassword:
-			status = CheckPasswordAuth(port, &logdetail);
+			status = track_login_attempts(port, CheckPasswordAuth(port, &logdetail));
 			break;
 
 		case uaYbTserverKey:
