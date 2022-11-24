@@ -1141,6 +1141,11 @@ AlterOptRoleElem:
 				{
 					$$ = makeDefElem("enabled", (Node *)makeInteger(false), @1);
 				}
+            /* CAUTION: DEV RULE to test increment failed attempts counter and disable profile */     
+			| PROFILE ATTEMPTS FAILED
+				{
+					$$ = makeDefElem("TEST_failed_attempt", (Node *)makeInteger(false), @1);
+				}
 			| IDENT
 				{
 					/*

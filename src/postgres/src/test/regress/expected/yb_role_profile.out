@@ -105,3 +105,4 @@ ALTER USER restricted_user PROFILE DISABLE;
 ALTER USER restricted_user PROFILE ATTACH non_existent;
 ERROR:  profile "non_existent" does not exist
 DROP USER restricted_user;
+DROP PROFILE test_profile;

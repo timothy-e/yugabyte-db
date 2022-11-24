@@ -61,3 +61,4 @@ ALTER USER restricted_user PROFILE DISABLE;
 --fail: Cannot attach to a non-existent profile
 ALTER USER restricted_user PROFILE ATTACH non_existent;
 DROP USER restricted_user;
+DROP PROFILE test_profile;

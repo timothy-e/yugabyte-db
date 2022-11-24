@@ -181,6 +181,34 @@ get_profile_oid(const char *prfname, bool missing_ok)
 	return result;
 }
 
+HeapTuple
+get_profile_tuple(Oid prfoid)
+{
+	Relation	 rel;
+	HeapScanDesc scandesc;
+	HeapTuple	 tuple;
+	ScanKeyData	 entry[1];
+
+	/*
+	 * Search pg_yb_role_profile.
+	 */
+	rel = heap_open(YbProfileRelationId, AccessShareLock);
+
+	ScanKeyInit(&entry[0], ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ, prfoid);
+	scandesc = heap_beginscan_catalog(rel, 1, entry);
+	tuple = heap_getnext(scandesc, ForwardScanDirection);
+
+	/* Must copy tuple before releasing buffer */
+	if (HeapTupleIsValid(tuple))
+		tuple = heap_copytuple(tuple);
+
+	heap_endscan(scandesc);
+	heap_close(rel, AccessShareLock);
+
+	return tuple;
+}
+
 /*
  * get_profile_name - given a profile OID, look up the name
  *
@@ -188,22 +216,18 @@ get_profile_oid(const char *prfname, bool missing_ok)
  * TODO: Profiles are not part of cache. Code has to iterate the heap.
  */
 char *
-get_profile_name(Oid prf_oid)
+get_profile_name(Oid prfoid)
 {
 	char	 *result;
 	HeapTuple tuple;
 
-	/*
-	 * Search pg_yb_profile using a cache lookup.
-	 */
-	tuple = SearchSysCache1(YBTABLEGROUPOID, ObjectIdGetDatum(prf_oid));
+	tuple = get_profile_tuple(prfoid);
 
 	/* We assume that there can be at most one matching tuple */
 	if (HeapTupleIsValid(tuple))
 	{
 		result = pstrdup(
 			NameStr(((Form_pg_yb_profile) GETSTRUCT(tuple))->prfname));
-		ReleaseSysCache(tuple);
 	}
 	else
 		result = NULL;
@@ -356,6 +380,10 @@ get_role_profile_tuple(Oid rolid)
 	scandesc = heap_beginscan_catalog(rel, 1, entry);
 	tuple = heap_getnext(scandesc, ForwardScanDirection);
 
+	/* Must copy tuple before releasing buffer */
+	if (HeapTupleIsValid(tuple))
+		tuple = heap_copytuple(tuple);
+
 	heap_endscan(scandesc);
 	heap_close(rel, AccessShareLock);
 
@@ -398,12 +426,9 @@ get_role_profile_oid(Oid rolid, bool missing_ok)
  * isenabled - bool value
  */
 Oid
-EnableRoleProfile(Oid roleid, bool isEnabled)
+update_role_profile(Oid roleid, Datum *new_record,
+		bool* new_record_nulls, bool* new_record_repl)
 {
-	Datum		new_record[Natts_pg_yb_role_profile];
-	bool		new_record_nulls[Natts_pg_yb_role_profile];
-	bool		new_record_repl[Natts_pg_yb_role_profile];
-
 	Relation	 pg_yb_role_profile_rel;
 	TupleDesc	pg_yb_role_profile_dsc;
 	HeapTuple	 tuple, new_tuple;
@@ -422,16 +447,6 @@ EnableRoleProfile(Oid roleid, bool isEnabled)
 						errmsg("role \"%d\" is not associated with a profile",
 							roleid)));
 
-	/*
-	 * Build an updated tuple with isEnabled set to the new value
-	 */
-	MemSet(new_record, 0, sizeof(new_record));
-	MemSet(new_record_nulls, false, sizeof(new_record_nulls));
-	MemSet(new_record_repl, false, sizeof(new_record_repl));
-
-	new_record[Anum_pg_yb_role_profile_rolisenabled - 1] = BoolGetDatum(isEnabled);
-	new_record_repl[Anum_pg_yb_role_profile_rolisenabled - 1] = true;
-
 	new_tuple = heap_modify_tuple(tuple, pg_yb_role_profile_dsc, new_record,
 								  new_record_nulls, new_record_repl);
 	CatalogTupleUpdate(pg_yb_role_profile_rel, &tuple->t_self, new_tuple);
@@ -446,9 +461,114 @@ EnableRoleProfile(Oid roleid, bool isEnabled)
 	heap_close(pg_yb_role_profile_rel, NoLock);
 
 	return roleprfid;
+}
 
+/*
+ * EnableRoleProfile - set rolisenabled flag
+ *
+ * roleid - the oid of the role
+ * isenabled - bool value
+ */
+Oid
+EnableRoleProfile(Oid roleid, bool isEnabled)
+{
+	Datum		new_record[Natts_pg_yb_role_profile];
+	bool		new_record_nulls[Natts_pg_yb_role_profile];
+	bool		new_record_repl[Natts_pg_yb_role_profile];
 
+	/*
+	 * Build an updated tuple with isEnabled set to the new value
+	 */
+	MemSet(new_record, 0, sizeof(new_record));
+	MemSet(new_record_nulls, false, sizeof(new_record_nulls));
+	MemSet(new_record_repl, false, sizeof(new_record_repl));
 
+	new_record[Anum_pg_yb_role_profile_rolisenabled - 1] = BoolGetDatum(isEnabled);
+	new_record_repl[Anum_pg_yb_role_profile_rolisenabled - 1] = true;
+	new_record[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = Int16GetDatum(0);
+	new_record_repl[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = true;
+
+	return update_role_profile(roleid, new_record, new_record_nulls, new_record_repl);
+}
+
+/*
+ * ResetFailedAttempts - reset failed_attempts counter
+ *
+ * roleid - the oid of the role
+ */
+Oid
+ResetFailedAttempts(Oid roleid)
+{
+	Datum		new_record[Natts_pg_yb_role_profile];
+	bool		new_record_nulls[Natts_pg_yb_role_profile];
+	bool		new_record_repl[Natts_pg_yb_role_profile];
+
+	/*
+	 * Build an updated tuple with isEnabled set to the new value
+	 */
+	MemSet(new_record, 0, sizeof(new_record));
+	MemSet(new_record_nulls, false, sizeof(new_record_nulls));
+	MemSet(new_record_repl, false, sizeof(new_record_repl));
+
+	new_record[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = Int16GetDatum(0);
+	new_record_repl[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = true;
+
+	return update_role_profile(roleid, new_record, new_record_nulls, new_record_repl);
+}
+
+/*
+ * IncAndDisableProfileMaybe - increment failed_attempts counter and disable if it
+ *                             exceeds limit
+ *
+ * roleid - the oid of the role
+ */
+Oid
+IncAndDisableProfileMaybe(Oid roleid)
+{
+	Datum		new_record[Natts_pg_yb_role_profile];
+	bool		new_record_nulls[Natts_pg_yb_role_profile];
+	bool		new_record_repl[Natts_pg_yb_role_profile];
+
+	/*
+	 * Build an updated tuple with isEnabled set to the new value
+	 */
+	MemSet(new_record, 0, sizeof(new_record));
+	MemSet(new_record_nulls, false, sizeof(new_record_nulls));
+	MemSet(new_record_repl, false, sizeof(new_record_repl));
+
+	HeapTuple rolprftuple = get_role_profile_tuple(roleid);
+
+	if (!HeapTupleIsValid(rolprftuple))
+		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
+						errmsg("role \"%d\" is not associated with a profile", 
+							roleid)));
+
+	Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile)
+									GETSTRUCT(rolprftuple);
+
+	HeapTuple prftuple = get_profile_tuple(rolprfform->prfid);
+	if (!HeapTupleIsValid(prftuple))
+		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
+						errmsg("Profile \"%d\" not found!", 
+							roleid)));
+
+	Form_pg_yb_profile prfform = (Form_pg_yb_profile) GETSTRUCT(prftuple);
+
+	int failed_attempts = DatumGetInt16(rolprfform->rolfailedloginattempts) + 1;
+
+	new_record[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = 
+		Int16GetDatum(failed_attempts);
+	new_record_repl[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = true;
+
+	int failed_attempts_limit = DatumGetInt16(prfform->prffailedloginattempts);
+	
+	// Keep role enabled IFF role is enabled AND failed attempts < limit 
+	new_record[Anum_pg_yb_role_profile_rolisenabled - 1] = 
+		BoolGetDatum(rolprfform->rolisenabled && 
+				(failed_attempts <= failed_attempts_limit));
+	new_record_repl[Anum_pg_yb_role_profile_rolisenabled - 1] = true;
+
+	return update_role_profile(roleid, new_record, new_record_nulls, new_record_repl);
 }
 
 /*
