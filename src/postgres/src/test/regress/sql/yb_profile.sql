@@ -10,6 +10,7 @@
 \d pg_yb_profile
 SELECT oid, relname, reltype, relnatts FROM pg_class WHERE relname IN ('pg_yb_profile', 'pg_yb_profile_oid_index');
 SELECT oid, typname, typrelid FROM pg_type WHERE typname LIKE 'pg_yb_profile';
+SELECT pg_describe_object('pg_yb_profile'::regclass::oid, oid, 0) FROM pg_yb_profile;
 
 --
 -- CREATE PROFILE

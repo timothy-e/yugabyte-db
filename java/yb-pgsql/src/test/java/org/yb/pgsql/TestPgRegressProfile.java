@@ -45,7 +45,7 @@ public class TestPgRegressProfile extends BasePgSQLTest {
     }
 
     @Test
-    public void testPgRegressTablegroup() throws Exception {
+    public void testPgRegressProfile() throws Exception {
         runPgRegressTest("yb_profile_schedule");
     }
 }

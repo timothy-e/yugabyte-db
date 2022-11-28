@@ -128,6 +128,7 @@ CreateProfile(CreateProfileStmt *stmt)
 		DirectFunctionCall1(namein, CStringGetDatum(stmt->prfname));
 	values[Anum_pg_yb_profile_prffailedloginattempts - 1] =
 		intVal(stmt->prffailedloginattempts);
+	values[Anum_pg_yb_profile_prfpasswordlocktime - 1] = 0;
 
 	tuple = heap_form_tuple(rel->rd_att, values, nulls);
 
@@ -214,7 +215,6 @@ get_profile_tuple(Oid prfoid)
  * get_profile_name - given a profile OID, look up the name
  *
  * Returns a palloc'd string, or NULL if no such profile.
- * TODO: Profiles are not part of cache. Code has to iterate the heap.
  */
 char *
 get_profile_name(Oid prfoid)
@@ -226,10 +226,7 @@ get_profile_name(Oid prfoid)
 
 	/* We assume that there can be at most one matching tuple */
 	if (HeapTupleIsValid(tuple))
-	{
-		result = pstrdup(
-			NameStr(((Form_pg_yb_profile) GETSTRUCT(tuple))->prfname));
-	}
+		result = pstrdup(NameStr(((Form_pg_yb_profile) GETSTRUCT(tuple))->prfname));
 	else
 		result = NULL;
 
@@ -254,7 +251,7 @@ RemoveProfileById(Oid prf_oid)
 	if (prf_oid == DEFAULT_PROFILE_OID)
 	{
 		ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-					errmsg("profile \"default\" cannot be deleted")));
+					errmsg("profile \"default\" cannot be dropped")));
 	}
 
 	pg_profile_rel = heap_open(YbProfileRelationId, RowExclusiveLock);
@@ -597,4 +594,3 @@ RemoveRoleProfileById(Oid rolprfoid)
 	/* We keep the lock on pg_yb_login_profile until commit */
 	heap_close(pg_role_profile_rel, NoLock);
 }
-

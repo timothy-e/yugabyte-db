@@ -2,7 +2,7 @@ BEGIN;
   CREATE TABLE IF NOT EXISTS pg_catalog.pg_yb_profile (
     prfname NAME NOT NULL,
     prffailedloginattempts SMALLINT NOT NULL,
-    prfpasswordlocktime INTEGER NOT NULL,
+    prfpasswordlocktime INTEGER NOT NULL DEFAULT 0,
     CONSTRAINT pg_yb_profile_oid_index PRIMARY KEY(oid ASC)
         WITH (table_oid = 8050)
   ) WITH (

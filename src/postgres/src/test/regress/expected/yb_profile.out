@@ -34,6 +34,12 @@ SELECT oid, typname, typrelid FROM pg_type WHERE typname LIKE 'pg_yb_profile';
  8051 | pg_yb_profile |     8049
 (1 row)
 
+SELECT pg_describe_object('pg_yb_profile'::regclass::oid, oid, 0) FROM pg_yb_profile;
+ pg_describe_object
+--------------------
+ profile default
+(1 row)
+
 --
 -- CREATE PROFILE
 --
@@ -63,4 +69,4 @@ DROP PROFILE test_profile;
 ERROR:  profile "test_profile" does not exist
 -- fail: cannot delete default profile
 DROP PROFILE "default";
-ERROR:  profile "default" cannot be deleted
+ERROR:  profile "default" cannot be dropped
