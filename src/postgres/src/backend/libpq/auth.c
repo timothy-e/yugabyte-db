@@ -36,6 +36,7 @@
 #include "libpq/scram.h"
 #include "miscadmin.h"
 #include "port/pg_bswap.h"
+#include "pgstat.h"
 #include "replication/walsender.h"
 #include "storage/ipc.h"
 #include "utils/backend_random.h"
@@ -361,30 +362,14 @@ auth_failed(Port *port, int status, char *logdetail)
 static int
 track_login_attempts(Port* port, int status)
 {
-	if (status == STATUS_ERROR)
+	HeapTuple roleTup;
+	/* Get role info from pg_authid */
+	roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
+	if (HeapTupleIsValid(roleTup))
 	{
-		HeapTuple roleTup;
-		/* Get role info from pg_authid */
-		roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
-		if (HeapTupleIsValid(roleTup))
-		{
-			//Oid roleid = HeapTupleGetOid(roleTup);
-			//IncAndDisableProfileMaybe(roleid);
-			ReleaseSysCache(roleTup);
-		}
-	}
-	else if(status == STATUS_OK)
-	{
-		HeapTuple roleTup;
-		/* Get role info from pg_authid */
-		roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
-		if (HeapTupleIsValid(roleTup))
-		{
-			Oid roleid = HeapTupleGetOid(roleTup);
-			ResetFailedAttemptsCounter(roleid);
-			ReleaseSysCache(roleTup);
-		}
-
+		Oid roleid = HeapTupleGetOid(roleTup);
+		elog(LOG, "Place holder to track login attempt for %d", roleid);
+		ReleaseSysCache(roleTup);
 	}
 	return status;
 }
@@ -914,7 +899,7 @@ CheckMD5Auth(Port *port, char *shadow_pass, char **logdetail)
 		result = STATUS_ERROR;
 
 	pfree(passwd);
-
+	elog(LOG, "Auth succeeded? %d", result == STATUS_OK);
 	return result;
 }
 

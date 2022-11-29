@@ -431,12 +431,12 @@ update_role_profile(Oid roleid, Datum *new_record,
 		bool missing_ok)
 {
 	Relation	 pg_yb_role_profile_rel;
-	//TupleDesc	pg_yb_role_profile_dsc;
-	HeapTuple	 tuple;//, new_tuple;
+	TupleDesc	pg_yb_role_profile_dsc;
+	HeapTuple	 tuple, new_tuple;
 	Oid roleprfid;
 
 	pg_yb_role_profile_rel = heap_open(YbRoleProfileRelationId, RowExclusiveLock);
-	//pg_yb_role_profile_dsc = RelationGetDescr(pg_yb_role_profile_rel);
+	pg_yb_role_profile_dsc = RelationGetDescr(pg_yb_role_profile_rel);
 
 	tuple = get_role_profile_tuple(roleid);
 
@@ -444,14 +444,14 @@ update_role_profile(Oid roleid, Datum *new_record,
 	if (HeapTupleIsValid(tuple))
 	{
 		roleprfid = HeapTupleGetOid(tuple);
-/*		new_tuple = heap_modify_tuple(tuple, pg_yb_role_profile_dsc, new_record,
+		new_tuple = heap_modify_tuple(tuple, pg_yb_role_profile_dsc, new_record,
 								  new_record_nulls, new_record_repl);
 		CatalogTupleUpdate(pg_yb_role_profile_rel, &tuple->t_self, new_tuple);
 
 		InvokeObjectPostAlterHook(YbRoleProfileRelationId, roleprfid, 0);
 
 		heap_freetuple(new_tuple);
-*/
+
 	}
 	else if (!missing_ok)
 		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
