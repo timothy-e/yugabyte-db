@@ -39,7 +39,6 @@ public class TestYbRoleProfile extends BasePgSQLTest {
   private static final String PROFILE_USER_PASS = "profile_password";
   private static final String PROFILE_NAME = "prf";
   private static final String AUTHENTICATION_FAILED_MESSAGE = String.format("FATAL: password authentication failed for user \"%s\"", PROFILE_USERNAME);;
-  private static final String CANNOT_LOGIN_MESSAGE = String.format("FATAL: role \"%s\" is not permitted to log in", PROFILE_USERNAME);
   private static final int FAILED_ATTEMPTS = 3;
 
   @Override
@@ -127,7 +126,7 @@ public class TestYbRoleProfile extends BasePgSQLTest {
     assertProfileStateForUser(PROFILE_USERNAME, FAILED_ATTEMPTS + 1, false);
 
     /* Now the user cannot login */
-    attemptLogin(PROFILE_USERNAME, PROFILE_USER_PASS, CANNOT_LOGIN_MESSAGE);
+    attemptLogin(PROFILE_USERNAME, PROFILE_USER_PASS, AUTHENTICATION_FAILED_MESSAGE);
 
     /* After an admin resets, the user can login again */
     unlockUser(PROFILE_USERNAME);
@@ -142,7 +141,7 @@ public class TestYbRoleProfile extends BasePgSQLTest {
     assertProfileStateForUser(PROFILE_USERNAME, 0, false);
 
     /* Now the user cannot login */
-    attemptLogin(PROFILE_USERNAME, PROFILE_USER_PASS, CANNOT_LOGIN_MESSAGE);
+    attemptLogin(PROFILE_USERNAME, PROFILE_USER_PASS, AUTHENTICATION_FAILED_MESSAGE);
 
     /* After an admin resets, the user can login again */
     unlockUser(PROFILE_USERNAME);
@@ -175,10 +174,10 @@ public class TestYbRoleProfile extends BasePgSQLTest {
     assertProfileStateForUser(PROFILE_USERNAME, FAILED_ATTEMPTS + 1, false);
 
     /* A correct password gives a different error message and does not increment the failed counts*/
-    attemptLogin(PROFILE_USERNAME, PROFILE_USER_PASS, CANNOT_LOGIN_MESSAGE);
-    assertProfileStateForUser(PROFILE_USERNAME, FAILED_ATTEMPTS + 1, false);
+    attemptLogin(PROFILE_USERNAME, PROFILE_USER_PASS, AUTHENTICATION_FAILED_MESSAGE);
+    assertProfileStateForUser(PROFILE_USERNAME, FAILED_ATTEMPTS + 2, false);
 
     attemptLogin(PROFILE_USERNAME, "wrong", AUTHENTICATION_FAILED_MESSAGE);
-    assertProfileStateForUser(PROFILE_USERNAME, FAILED_ATTEMPTS + 2, false);
+    assertProfileStateForUser(PROFILE_USERNAME, FAILED_ATTEMPTS + 3, false);
   }
 }
