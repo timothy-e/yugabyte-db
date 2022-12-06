@@ -312,7 +312,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 		CreateMatViewStmt RefreshMatViewStmt CreateAmStmt
 		CreatePublicationStmt AlterPublicationStmt
 		CreateSubscriptionStmt AlterSubscriptionStmt DropSubscriptionStmt
-		BackfillIndexStmt
+		BackfillIndexStmt CreateProfileStmt
 
 %type <node>	select_no_parens select_with_parens select_clause
 				simple_select values_clause
@@ -660,7 +660,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 /* ordinary key words in alphabetical order */
 %token <keyword> ABORT_P ABSOLUTE_P ACCESS ACTION ADD_P ADMIN AFTER
 	AGGREGATE ALL ALSO ALTER ALWAYS ANALYSE ANALYZE AND ANY ARRAY AS ASC
-	ASSERTION ASSIGNMENT ASYMMETRIC AT ATTACH ATTRIBUTE AUTHORIZATION
+	ASSERTION ASSIGNMENT ASYMMETRIC AT ATTACH ATTEMPTS ATTRIBUTE AUTHORIZATION
 
 	BACKFILL BACKWARD BEFORE BEGIN_P BETWEEN BIGINT BINARY BIT
 	BOOLEAN_P BOTH BY
@@ -683,7 +683,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 	EXCLUDE EXCLUDING EXCLUSIVE EXECUTE EXISTS EXPLAIN
 	EXTENSION EXTERNAL EXTRACT
 
-	FALSE_P FAMILY FETCH FILTER FIRST_P FLOAT_P FOLLOWING FOR
+	FAILED FALSE_P FAMILY FETCH FILTER FIRST_P FLOAT_P FOLLOWING FOR
 	FORCE FOREIGN FORWARD FREEZE FROM FULL FUNCTION FUNCTIONS
 
 	GENERATED GLOBAL GRANT GRANTED GREATEST GROUP_P GROUPING GROUPS
@@ -715,7 +715,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 
 	PARALLEL PARSER PARTIAL PARTITION PASSING PASSWORD PLACING PLANS POLICY
 	POSITION PRECEDING PRECISION PRESERVE PREPARE PREPARED PRIMARY
-	PRIOR PRIVILEGES PROCEDURAL PROCEDURE PROCEDURES PROGRAM PUBLICATION
+	PRIOR PRIVILEGES PROCEDURAL PROCEDURE PROCEDURES PROFILE PROGRAM PUBLICATION
 
 	QUOTE
 
@@ -922,6 +922,7 @@ stmt :
 			| CreateOpClassStmt
 			| CreateOpFamilyStmt
 			| CreatePolicyStmt
+			| CreateProfileStmt
 			| CreateRoleStmt
 			| CreateSchemaStmt
 			| CreateStatsStmt
@@ -1124,6 +1125,27 @@ AlterOptRoleElem:
 				{
 					$$ = makeDefElem("rolemembers", (Node *)$2, @1);
 				}
+			| PROFILE DETACH
+				{
+					$$ = makeDefElem("detach", (Node *)makeInteger(true), @1);
+				}
+			| PROFILE ATTACH name
+				{
+					$$ = makeDefElem("profile", (Node *)makeString($3), @1);
+				}
+			| PROFILE ENABLE_P
+				{
+					$$ = makeDefElem("enabled", (Node *)makeInteger(true), @1);
+				}
+			| PROFILE DISABLE_P
+				{
+					$$ = makeDefElem("enabled", (Node *)makeInteger(false), @1);
+				}
+            /* CAUTION: DEV RULE to test increment failed attempts counter and disable profile */     
+			| PROFILE ATTEMPTS FAILED
+				{
+					$$ = makeDefElem("TEST_failed_attempt", (Node *)makeInteger(false), @1);
+				}
 			| IDENT
 				{
 					/*
@@ -1151,6 +1173,10 @@ AlterOptRoleElem:
 						$$ = makeDefElem("canlogin", (Node *)makeInteger(true), @1);
 					else if (strcmp($1, "nologin") == 0)
 						$$ = makeDefElem("canlogin", (Node *)makeInteger(false), @1);
+					else if (strcmp($1, "lock") == 0)
+						$$ = makeDefElem("islocked", (Node *)makeInteger(true), @1);
+					else if (strcmp($1, "open") == 0)
+						$$ = makeDefElem("islocked", (Node *)makeInteger(false), @1);
 					else if (strcmp($1, "bypassrls") == 0)
 						$$ = makeDefElem("bypassrls", (Node *)makeInteger(true), @1);
 					else if (strcmp($1, "nobypassrls") == 0)
@@ -4820,6 +4846,22 @@ DropTableSpaceStmt: DROP TABLESPACE name
 /*****************************************************************************
  *
  *		QUERY:
+ *             CREATE PROFILE prfname FAILED ATTEMPTS <number>
+ *
+ *****************************************************************************/
+
+CreateProfileStmt: CREATE PROFILE name FAILED ATTEMPTS SignedIconst
+				{
+					CreateProfileStmt *n = makeNode(CreateProfileStmt);
+					n->prfname = $3;
+					n->prffailedloginattempts = makeInteger($6);
+					$$ = (Node *) n;
+				}
+		;
+
+/*****************************************************************************
+ *
+ *		QUERY:
  *             CREATE EXTENSION extension
  *             [ WITH ] [ SCHEMA schema ] [ VERSION version ] [ FROM oldversion ]
  *
@@ -6815,6 +6857,7 @@ drop_type_name:
 					parser_ybc_beta_feature(@1, "tablegroup", true);
 					$$ = OBJECT_YBTABLEGROUP;
 				}
+			| PROFILE { $$ = OBJECT_PROFILE; }
 		;
 
 /* object types attached to a table */
@@ -15966,6 +16009,7 @@ unreserved_keyword:
 			| ASSIGNMENT
 			| AT
 			| ATTACH
+			| ATTEMPTS
 			| ATTRIBUTE
 			| BACKFILL
 			| BACKWARD
@@ -16039,6 +16083,7 @@ unreserved_keyword:
 			| EXPLAIN
 			| EXTENSION
 			| EXTERNAL
+			| FAILED
 			| FAMILY
 			| FILTER
 			| FIRST_P
@@ -16140,6 +16185,7 @@ unreserved_keyword:
 			| PROCEDURAL
 			| PROCEDURE
 			| PROCEDURES
+			| PROFILE
 			| PROGRAM
 			| PUBLICATION
 			| QUOTE

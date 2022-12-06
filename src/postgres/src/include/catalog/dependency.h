@@ -189,10 +189,11 @@ typedef enum ObjectClass
 	OCLASS_PUBLICATION,			/* pg_publication */
 	OCLASS_PUBLICATION_REL,		/* pg_publication_rel */
 	OCLASS_SUBSCRIPTION,		/* pg_subscription */
-	OCLASS_TRANSFORM			/* pg_transform */
+	OCLASS_TRANSFORM,			/* pg_transform */
+	OCLASS_PROFILE,				/* pg_yb_login_profile */
 } ObjectClass;
 
-#define LAST_OCLASS		OCLASS_TRANSFORM
+#define LAST_OCLASS		OCLASS_PROFILE
 
 /* flag bits for performDeletion/performMultipleDeletions: */
 #define PERFORM_DELETION_INTERNAL			0x0001	/* internal action */

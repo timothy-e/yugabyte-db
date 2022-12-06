@@ -27,7 +27,10 @@
 #include "access/sysattr.h"
 #include "access/xact.h"
 #include "catalog/pg_type.h"
+#include "catalog/pg_yb_role_profile.h"
+#include "catalog/pg_yb_role_profile_d.h"
 #include "catalog/yb_type.h"
+#include "commands/profile.h"
 #include "utils/relcache.h"
 #include "utils/rel.h"
 #include "utils/lsyscache.h"
@@ -1048,6 +1051,81 @@ bool YBCExecuteUpdate(Relation rel,
 	 * Former would effectively break further evaluation, so there should be no
 	 * secondary indexes, after row update triggers, nor returning clause.
 	 */
+	return rows_affected_count > 0;
+}
+
+extern bool
+YBCExecuteUpdateLoginAttempts(Oid roleid,
+							  int failed_attempts,
+							  bool is_enabled)
+{
+	YBCPgStatement	update_stmt = NULL;
+	Datum			ybctid;
+	HeapTuple	 	tuple = get_role_profile_tuple(roleid);
+	Relation 		rel = relation_open(YbRoleProfileRelationId, AccessShareLock);
+	TupleDesc 		inputTupleDesc = rel->rd_att;
+	TupleDesc		outputTupleDesc = RelationGetDescr(rel);
+	Oid				dboid = YBCGetDatabaseOid(rel);
+
+	/* Create update statement. */
+	HandleYBStatus(YBCPgNewUpdate(dboid,
+								  YbRoleProfileRelationId,
+								  true,
+								  YBCIsRegionLocal(rel),
+								  &update_stmt));
+
+	/*
+	 * Look for ybctid. Raise error if ybctid is not found.
+	 *
+	 * Retrieve ybctid from the slot if possible, otherwise generate it
+	 * from tuple values.
+	 */
+	ybctid = YBCGetYBTupleIdFromTuple(rel, tuple, inputTupleDesc);
+
+	if (ybctid == 0)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_COLUMN), errmsg(
+					"Missing column ybctid in UPDATE request to YugaByte database")));
+	}
+
+	YBCBindTupleId(update_stmt, ybctid);
+
+	for (int idx = 0; idx < outputTupleDesc->natts; idx++)
+	{
+		FormData_pg_attribute  *att_desc = TupleDescAttr(outputTupleDesc, idx);
+		AttrNumber 				attnum = att_desc->attnum;
+		int32_t 				type_id = att_desc->atttypid;
+		Datum 					d;
+
+		if (attnum == Anum_pg_yb_role_profile_rolfailedloginattempts)
+		{
+			d = Int16GetDatum(failed_attempts);
+		}
+		else if (attnum == Anum_pg_yb_role_profile_rolisenabled)
+		{
+			d = BoolGetDatum(is_enabled);
+		}
+		else
+		{
+			continue;
+		}
+
+		YBCPgExpr ybc_expr = YBCNewConstant(update_stmt, type_id, InvalidOid, d, false);
+
+		HandleYBStatus(YBCPgDmlAssignColumn(update_stmt, attnum, ybc_expr));
+	}
+
+	/* Execute the statement. */
+	int rows_affected_count = 0;
+	YBCExecWriteStmt(update_stmt,
+					 rel,
+					 &rows_affected_count);
+
+	/* Cleanup. */
+	YBCPgDeleteStatement(update_stmt);
+
+	relation_close(rel, AccessShareLock);
 	return rows_affected_count > 0;
 }
 
