@@ -658,7 +658,7 @@ ClientAuthentication(Port *port)
 		{
 			Oid roleid = HeapTupleGetOid(roleTup);
 			ReleaseSysCache(roleTup);
-			ResetProfileFailedAttempts(roleid);
+			YBCResetFailedAttemptsIfAllowed(roleid);
 		}
 		else
 		{
@@ -673,7 +673,7 @@ ClientAuthentication(Port *port)
 		{
 			Oid roleid = HeapTupleGetOid(roleTup);
 			ReleaseSysCache(roleTup);
-			IncFailedAttemptsAndMaybeDisableProfile(roleid);
+			YBCIncFailedAttemptsAndMaybeDisableProfile(roleid);
 		}
 		else
 		{
