@@ -786,15 +786,15 @@ AlterRole(AlterRoleStmt *stmt)
 	{
 		if (profile != NULL)
 		{
-			CreateRoleProfile(roleid, rolename, rolename, profile);
+			CreateRoleProfile(roleid, rolename, profile);
 		}
 		else if (denabled != NULL)
 		{
-			EnableRoleProfile(roleid, enabled > 0);
+			EnableRoleProfile(roleid, rolename, enabled > 0);
 		}
 		else if (dfailedattempt != NULL)
 		{
-			IncFailedAttemptsAndMaybeDisableProfile(roleid);
+			IncFailedAttemptsAndMaybeDisableProfile(roleid, rolename);
 		}
 		else
 		{

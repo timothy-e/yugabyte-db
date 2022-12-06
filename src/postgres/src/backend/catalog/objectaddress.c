@@ -59,7 +59,6 @@
 #include "catalog/pg_type.h"
 #include "catalog/pg_user_mapping.h"
 #include "catalog/pg_yb_profile.h"
-#include "catalog/pg_yb_role_profile.h"
 #include "catalog/pg_yb_tablegroup.h"
 #include "commands/dbcommands.h"
 #include "commands/defrem.h"
