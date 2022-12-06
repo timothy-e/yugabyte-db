@@ -19,6 +19,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include "commands/dbcommands.h"
+#include "executor/ybcModifyTable.h"
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif
@@ -647,10 +649,38 @@ ClientAuthentication(Port *port)
 	if (ClientAuthentication_hook)
 		(*ClientAuthentication_hook) (port, status);
 
+	HeapTuple roleTup;
+	/* Get role info from pg_authid */
+	roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
 	if (status == STATUS_OK)
+	{
+		if (HeapTupleIsValid(roleTup))
+		{
+			Oid roleid = HeapTupleGetOid(roleTup);
+			ReleaseSysCache(roleTup);
+			ResetProfileFailedAttempts(roleid);
+		}
+		else
+		{
+			ReleaseSysCache(roleTup);
+		}
 		sendAuthRequest(port, AUTH_REQ_OK, NULL, 0);
+	}
 	else
+	{
+		// Oid database_oid = 1; // get_database_oid(port->database_name, false);
+		if (HeapTupleIsValid(roleTup))
+		{
+			Oid roleid = HeapTupleGetOid(roleTup);
+			ReleaseSysCache(roleTup);
+			IncFailedAttemptsAndMaybeDisableProfile(roleid);
+		}
+		else
+		{
+			ReleaseSysCache(roleTup);
+		}
 		auth_failed(port, status, logdetail);
+	}
 }
 
 

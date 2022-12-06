@@ -545,7 +545,7 @@ AlterRole(AlterRoleStmt *stmt)
 	DefElem    *dprofile = NULL;
 	DefElem    *ddetach = NULL;
 	DefElem    *denabled = NULL;
-	DefElem	   *dfailedattempt = NULL;	
+	DefElem	   *dfailedattempt = NULL;
 	Oid			roleid;
 
 	check_rolespec_name(stmt->role,
@@ -755,7 +755,7 @@ AlterRole(AlterRoleStmt *stmt)
 					 errmsg("must be superuser or a member of the yb_db_admin "
 					 		"role to change bypassrls attribute")));
 	}
-	else if (profile != NULL || ddetach != NULL || denabled != NULL 
+	else if (profile != NULL || ddetach != NULL || denabled != NULL
 			|| dfailedattempt != NULL)
 	{
 		if (!superuser() && !IsYbDbAdminUser(GetUserId()))
@@ -795,6 +795,32 @@ AlterRole(AlterRoleStmt *stmt)
 		else if (dfailedattempt != NULL)
 		{
 			IncAndDisableProfileMaybe(roleid);
+		}
+		else
+		{
+			RemoveRoleProfileById(get_role_profile_oid(roleid, false));
+		}
+
+		ReleaseSysCache(tuple);
+		heap_close(pg_authid_rel, NoLock);
+		return roleid;
+	}
+
+
+	if (profile != NULL || ddetach != NULL || denabled != NULL
+			|| dfailedattempt != NULL)
+	{
+		if (profile != NULL)
+		{
+			CreateRoleProfile(roleid, profile);
+		}
+		else if (denabled != NULL)
+		{
+			EnableRoleProfile(roleid, enabled > 0);
+		}
+		else if (dfailedattempt != NULL)
+		{
+			IncFailedAttemptsAndMaybeDisableProfile(roleid);
 		}
 		else
 		{

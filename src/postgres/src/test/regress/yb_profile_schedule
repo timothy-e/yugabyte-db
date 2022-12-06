@@ -1,4 +1,4 @@
-# src/test/regress/yb_login_profile_schedule
+# src/test/regress/yb_profile_schedule
 #
 ####################################################################################################
 # PROFILE Testsuite: All DDL Statments on Tablegroups

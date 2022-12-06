@@ -81,6 +81,7 @@
 #include "utils/varlena.h"
 
 #include "yb/yql/pggate/ybc_pggate.h"
+#include "executor/ybcModifyTable.h"
 #include "pg_yb_utils.h"
 
 #define DEFAULT_PROFILE_OID 8055
@@ -252,7 +253,7 @@ RemoveProfileById(Oid prf_oid)
 
 	if (prf_oid == DEFAULT_PROFILE_OID)
 	{
-		ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), 
+		ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					errmsg("profile \"default\" cannot be deleted")));
 	}
 
@@ -333,7 +334,7 @@ CreateRoleProfile(Oid rolid, const char* prfname)
 	if (OidIsValid(get_role_profile_oid(rolid, true)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
-				 errmsg("role \"%d\" is associated with a profile \"%s\"", 
+				 errmsg("role \"%d\" is associated with a profile \"%s\"",
 					 rolid, prfname)));
 
 
@@ -413,7 +414,7 @@ get_role_profile_oid(Oid rolid, bool missing_ok)
 
 	if (!OidIsValid(result) && !missing_ok)
 		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
-						errmsg("role \"%d\" is not associated with a profile", 
+						errmsg("role \"%d\" is not associated with a profile",
 							rolid)));
 
 	return result;
@@ -430,10 +431,10 @@ update_role_profile(Oid roleid, Datum *new_record,
 		bool* new_record_nulls, bool* new_record_repl,
 		bool missing_ok)
 {
-	Relation	 pg_yb_role_profile_rel;
+	Relation	pg_yb_role_profile_rel;
 	TupleDesc	pg_yb_role_profile_dsc;
-	HeapTuple	 tuple, new_tuple;
-	Oid roleprfid;
+	HeapTuple	tuple, new_tuple;
+	Oid 		roleprfid;
 
 	pg_yb_role_profile_rel = heap_open(YbRoleProfileRelationId, RowExclusiveLock);
 	pg_yb_role_profile_dsc = RelationGetDescr(pg_yb_role_profile_rel);
@@ -451,7 +452,6 @@ update_role_profile(Oid roleid, Datum *new_record,
 		InvokeObjectPostAlterHook(YbRoleProfileRelationId, roleprfid, 0);
 
 		heap_freetuple(new_tuple);
-
 	}
 	else if (!missing_ok)
 		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -493,90 +493,62 @@ EnableRoleProfile(Oid roleid, bool isEnabled)
 	new_record[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = Int16GetDatum(0);
 	new_record_repl[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = true;
 
-	return update_role_profile(roleid, new_record, new_record_nulls, 
+	return update_role_profile(roleid, new_record, new_record_nulls,
 			new_record_repl, false);
 }
 
 /*
- * ResetFailedAttemptsCounter - reset failed_attempts counter
+ * ResetProfileFailedAttempts - reset failed_attempts counter
  *
  * roleid - the oid of the role
  */
-Oid
-ResetFailedAttemptsCounter(Oid roleid)
+void
+ResetProfileFailedAttempts(Oid roleid)
 {
-	Datum		new_record[Natts_pg_yb_role_profile];
-	bool		new_record_nulls[Natts_pg_yb_role_profile];
-	bool		new_record_repl[Natts_pg_yb_role_profile];
-
-	/*
-	 * Build an updated tuple with isEnabled set to the new value
-	 */
-	MemSet(new_record, 0, sizeof(new_record));
-	MemSet(new_record_nulls, false, sizeof(new_record_nulls));
-	MemSet(new_record_repl, false, sizeof(new_record_repl));
-
-	new_record[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = Int16GetDatum(0);
-	new_record_repl[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = true;
-
-	return update_role_profile(roleid, new_record, new_record_nulls, 
-			new_record_repl, true);
-}
-
-/*
- * IncAndDisableProfileMaybe - increment failed_attempts counter and disable if it
- *                             exceeds limit
- *
- * roleid - the oid of the role
- */
-Oid
-IncAndDisableProfileMaybe(Oid roleid)
-{
-	Datum		new_record[Natts_pg_yb_role_profile];
-	bool		new_record_nulls[Natts_pg_yb_role_profile];
-	bool		new_record_repl[Natts_pg_yb_role_profile];
-
-	/*
-	 * Build an updated tuple with isEnabled set to the new value
-	 */
-	MemSet(new_record, 0, sizeof(new_record));
-	MemSet(new_record_nulls, false, sizeof(new_record_nulls));
-	MemSet(new_record_repl, false, sizeof(new_record_repl));
-
 	HeapTuple rolprftuple = get_role_profile_tuple(roleid);
 
 	if (!HeapTupleIsValid(rolprftuple))
 		// Role is not associated with a profile.
-		return InvalidOid;
+		return;
+
+	YBCExecuteUpdateLoginAttempts(roleid, 0, true);
+}
+
+/*
+ * IncFailedAttemptsAndMaybeDisableProfile - increment failed_attempts counter and disable if it
+ *                             exceeds limit
+ *
+ * roleid - the oid of the role
+ */
+void
+IncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
+{
+	HeapTuple rolprftuple = get_role_profile_tuple(roleid);
+
+	if (!HeapTupleIsValid(rolprftuple))
+		// Role is not associated with a profile.
+		return;
 
 	Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile)
 									GETSTRUCT(rolprftuple);
 
-	elog(INFO, "Looking for profile %d", DatumGetObjectId(rolprfform->prfid));
 	HeapTuple prftuple = get_profile_tuple(DatumGetObjectId(rolprfform->prfid));
 	if (!HeapTupleIsValid(prftuple))
 		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
-						errmsg("Profile \"%d\" not found!", 
+						errmsg("Profile \"%d\" not found!",
 							roleid)));
 
 	Form_pg_yb_profile prfform = (Form_pg_yb_profile) GETSTRUCT(prftuple);
 
 	int failed_attempts = DatumGetInt16(rolprfform->rolfailedloginattempts) + 1;
-
-	new_record[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = 
-		Int16GetDatum(failed_attempts);
-	new_record_repl[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = true;
-
 	int failed_attempts_limit = DatumGetInt16(prfform->prffailedloginattempts);
-	
-	// Keep role enabled IFF role is enabled AND failed attempts < limit 
-	new_record[Anum_pg_yb_role_profile_rolisenabled - 1] = 
-		BoolGetDatum(rolprfform->rolisenabled && 
-				(failed_attempts <= failed_attempts_limit));
-	new_record_repl[Anum_pg_yb_role_profile_rolisenabled - 1] = true;
 
-	return update_role_profile(roleid, new_record, new_record_nulls, 
-			new_record_repl, true);
+	// Keep role enabled IFF role is enabled AND failed attempts < limit
+	bool rolisenabled = rolprfform->rolisenabled &&
+						(failed_attempts <= failed_attempts_limit);
+
+	YBCExecuteUpdateLoginAttempts(roleid, failed_attempts, rolisenabled);
+	CommitTransactionCommand();
 }
 
 /*
@@ -625,5 +597,4 @@ RemoveRoleProfileById(Oid rolprfoid)
 	/* We keep the lock on pg_yb_login_profile until commit */
 	heap_close(pg_role_profile_rel, NoLock);
 }
-
 
