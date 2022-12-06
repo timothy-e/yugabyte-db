@@ -780,21 +780,21 @@ AlterRole(AlterRoleStmt *stmt)
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("permission denied")));
 	}
-	
+
 	if (profile != NULL || ddetach != NULL || denabled != NULL
 			|| dfailedattempt != NULL)
 	{
-		if (profile != NULL) 
+		if (profile != NULL)
 		{
-			CreateRoleProfile(roleid, rolename, profile);
+			CreateRoleProfile(roleid, rolename, rolename, profile);
 		}
 		else if (denabled != NULL)
 		{
-			EnableRoleProfile(roleid, rolename, enabled > 0);
+			EnableRoleProfile(roleid, enabled > 0);
 		}
 		else if (dfailedattempt != NULL)
 		{
-			IncFailedAttemptsAndMaybeDisableProfile(roleid, rolename);
+			IncFailedAttemptsAndMaybeDisableProfile(roleid);
 		}
 		else
 		{

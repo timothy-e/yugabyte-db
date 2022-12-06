@@ -52,8 +52,8 @@ extern void RemoveProfileById(Oid prf_oid);
 
 extern Oid CreateRoleProfile(Oid rolid, const char* rolname,
 		const char* profile);
-extern Oid EnableRoleProfile(Oid roleid, const char* rolename, bool isEnabled);
-extern Oid IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char* rolename);
+extern Oid EnableRoleProfile(Oid roleid, bool isEnabled);
+extern Oid IncFailedAttemptsAndMaybeDisableProfile(Oid roleid);
 extern void YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid);
 extern void YBCResetFailedAttemptsIfAllowed(Oid roleid);
 
