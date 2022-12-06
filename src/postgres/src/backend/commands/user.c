@@ -794,7 +794,7 @@ AlterRole(AlterRoleStmt *stmt)
 		}
 		else if (dfailedattempt != NULL)
 		{
-			IncAndDisableProfileMaybe(roleid);
+			IncFailedAttemptsAndMaybeDisableProfile(roleid);
 		}
 		else
 		{

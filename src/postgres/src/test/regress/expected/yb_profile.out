@@ -18,7 +18,8 @@ Try \h with no arguments to see available help.
  prffailedloginattempts | smallint |           | not null |
  prfpasswordlocktime    | bigint   |           | not null |
 Indexes:
-    "pg_yb_profile_oid_index" PRIMARY KEY, lsm (oid ASC)
+    "pg_yb_profile_oid_index" PRIMARY KEY, lsm (oid ASC), tablespace "pg_global"
+Tablespace: "pg_global"
 
 SELECT oid, relname, reltype, relnatts FROM pg_class WHERE relname IN ('pg_yb_profile', 'pg_yb_profile_oid_index');
  oid  |         relname         | reltype | relnatts
