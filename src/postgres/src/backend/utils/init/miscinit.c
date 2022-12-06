@@ -655,22 +655,6 @@ InitializeSessionUserId(const char *rolename, Oid roleid)
 					 errmsg("role \"%s\" is not permitted to log in",
 							rname)));
 
-		if (IsYugaByteEnabled())
-		{
-			HeapTuple rolprftuple = get_role_profile_tuple(MyProc->roleId);
-			if (HeapTupleIsValid(rolprftuple))
-			{
-				Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile)
-									GETSTRUCT(rolprftuple);
-
-				if (!rolprfform->rolisenabled)
-					ereport(FATAL,
-							(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
-							 errmsg("role \"%s\" is not permitted to log in",
-									rname)));
-			}
-		}
-
 		/*
 		 * Check connection limit for this role.
 		 *

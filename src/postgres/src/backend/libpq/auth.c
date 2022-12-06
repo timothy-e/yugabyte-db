@@ -19,6 +19,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include "catalog/pg_yb_role_profile.h"
 #include "commands/dbcommands.h"
 #include "executor/ybcModifyTable.h"
 #ifdef HAVE_SYS_SELECT_H
@@ -633,34 +634,45 @@ ClientAuthentication(Port *port)
 	if (ClientAuthentication_hook)
 		(*ClientAuthentication_hook) (port, status);
 
-	HeapTuple roleTup;
+	bool profileisdisabled = false;
+	HeapTuple roleTup, profileTuple = NULL;
 	/* Get role info from pg_authid */
 	roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
-	if (status == STATUS_OK)
+	Oid roleid = InvalidOid;
+	if (HeapTupleIsValid(roleTup))
 	{
-		if (HeapTupleIsValid(roleTup))
+		roleid = HeapTupleGetOid(roleTup);
+		profileTuple = get_role_profile_tuple(roleid);
+		if (HeapTupleIsValid(profileTuple))
 		{
-			Oid roleid = HeapTupleGetOid(roleTup);
-			ReleaseSysCache(roleTup);
-			YBCResetFailedAttemptsIfAllowed(roleid);
+			Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile)
+										GETSTRUCT(profileTuple);
+			if (!rolprfform->rolisenabled)
+			{
+				profileisdisabled = true;
+			}
 		}
-		else
+	}
+	ReleaseSysCache(roleTup);
+
+	/*
+	 * If we're trying to log in to a user that has exceeded the failed login attempts,
+	 * shut it down.
+	 */
+
+	if (status == STATUS_OK && !profileisdisabled)
+	{
+		if (roleid != InvalidOid)
 		{
-			ReleaseSysCache(roleTup);
+			YBCResetFailedAttemptsIfAllowed(roleid);
 		}
 		sendAuthRequest(port, AUTH_REQ_OK, NULL, 0);
 	}
 	else
 	{
-		if (HeapTupleIsValid(roleTup))
+		if (roleid != InvalidOid)
 		{
-			Oid roleid = HeapTupleGetOid(roleTup);
-			ReleaseSysCache(roleTup);
 			YBCIncFailedAttemptsAndMaybeDisableProfile(roleid);
-		}
-		else
-		{
-			ReleaseSysCache(roleTup);
 		}
 		auth_failed(port, status, logdetail);
 	}

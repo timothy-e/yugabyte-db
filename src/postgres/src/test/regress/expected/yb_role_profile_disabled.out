@@ -24,4 +24,4 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
 
 -- fail to connect if disabled
 \c yugabyte disabled_user
-\connect: FATAL:  role "disabled_user" is not permitted to log in
+\connect: FATAL:  "trust" authentication failed for user "disabled_user"
