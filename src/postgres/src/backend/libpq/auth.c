@@ -360,22 +360,6 @@ auth_failed(Port *port, int status, char *logdetail)
 	/* doesn't return */
 }
 
-
-static int
-track_login_attempts(Port* port, int status)
-{
-	HeapTuple roleTup;
-	/* Get role info from pg_authid */
-	roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
-	if (HeapTupleIsValid(roleTup))
-	{
-		Oid roleid = HeapTupleGetOid(roleTup);
-		elog(LOG, "Place holder to track login attempt for %d", roleid);
-		ReleaseSysCache(roleTup);
-	}
-	return status;
-}
-
 /*
  * Client authentication starts here.  If there is an error, this
  * function does not return and the backend process is terminated.
@@ -591,11 +575,11 @@ ClientAuthentication(Port *port)
 
 		case uaMD5:
 		case uaSCRAM:
-			status = track_login_attempts(port, CheckPWChallengeAuth(port, &logdetail));
+			status = CheckPWChallengeAuth(port, &logdetail);
 			break;
 
 		case uaPassword:
-			status = track_login_attempts(port, CheckPasswordAuth(port, &logdetail));
+			status = CheckPasswordAuth(port, &logdetail);
 			break;
 
 		case uaYbTserverKey:
@@ -668,7 +652,6 @@ ClientAuthentication(Port *port)
 	}
 	else
 	{
-		// Oid database_oid = 1; // get_database_oid(port->database_name, false);
 		if (HeapTupleIsValid(roleTup))
 		{
 			Oid roleid = HeapTupleGetOid(roleTup);
