@@ -361,6 +361,7 @@ auth_failed(Port *port, int status, char *logdetail)
 	/* doesn't return */
 }
 
+
 /*
  * Client authentication starts here.  If there is an error, this
  * function does not return and the backend process is terminated.
@@ -924,7 +925,7 @@ CheckMD5Auth(Port *port, char *shadow_pass, char **logdetail)
 		result = STATUS_ERROR;
 
 	pfree(passwd);
-	elog(LOG, "Auth succeeded? %d", result == STATUS_OK);
+
 	return result;
 }
 

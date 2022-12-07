@@ -43,25 +43,25 @@
 #include "lib/stringinfo.h"
 #include "nodes/parsenodes.h"
 
-extern Oid CreateProfile(CreateProfileStmt *stmt);
+extern Oid CreateProfile(CreateProfileStmt* stmt);
 
-extern Oid	 get_profile_oid(const char *prfname, bool missing_ok);
-extern char *get_profile_name(Oid prf_oid);
+extern Oid	 get_profile_oid(const char* prfname, bool missing_ok);
+extern char* get_profile_name(Oid prf_oid);
 
 extern void RemoveProfileById(Oid prf_oid);
 
-extern Oid CreateRoleProfile(Oid rolid, const char *rolname,
+extern Oid CreateRoleProfile(Oid rolid, const char* rolname,
 		const char* profile);
-extern Oid EnableRoleProfile(Oid roleid, const char *rolname, bool isEnabled);
-extern Oid IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char *rolname);
+extern Oid EnableRoleProfile(Oid roleid, const char* rolname, bool isEnabled);
+extern Oid IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char* rolname);
 extern void YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid);
 extern void YBCResetFailedAttemptsIfAllowed(Oid roleid);
 
-extern Oid	 get_role_profile_oid(Oid rolid, const char *rolname,
+extern Oid	 get_role_profile_oid(Oid rolid, const char* rolname,
 		bool missing_ok);
 extern Oid	 get_role_oid_from_role_profile(Oid rolprfid);
 extern HeapTuple get_role_profile_tuple(Oid rolid);
 
-extern void RemoveRoleProfileForRole(Oid roleoid, const char *rolename);
+extern void RemoveRoleProfileForRole(Oid roleoid, const char* rolename);
 extern void RemoveRoleProfileById(Oid roleprfoid);
 #endif /* PROFILE_H */

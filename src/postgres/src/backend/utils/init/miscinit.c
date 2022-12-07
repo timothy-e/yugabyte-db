@@ -34,8 +34,6 @@
 
 #include "access/htup_details.h"
 #include "catalog/pg_authid.h"
-#include "catalog/pg_yb_role_profile.h"
-#include "commands/profile.h"
 #include "common/file_perm.h"
 #include "libpq/libpq.h"
 #include "mb/pg_wchar.h"
