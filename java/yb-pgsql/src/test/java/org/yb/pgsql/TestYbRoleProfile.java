@@ -13,7 +13,7 @@
 
 package org.yb.pgsql;
 
-import static org.junit.Assert.assertEquals;
+import static org.yb.AssertionWrappers.assertEquals;
 import static org.yb.AssertionWrappers.assertFalse;
 
 import java.sql.Connection;
@@ -30,16 +30,16 @@ import org.slf4j.LoggerFactory;
 import org.yb.YBTestRunner;
 
 import com.yugabyte.util.PSQLException;
-
 @RunWith(value=YBTestRunner.class)
 public class TestYbRoleProfile extends BasePgSQLTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestPgSequences.class);
-  private static final String PROFILE_USERNAME = "profile_user";
-  private static final String PROFILE_USER_PASS = "profile_password";
-  private static final String PROFILE_NAME = "prf";
-  private static final String AUTHENTICATION_FAILED_MESSAGE = String.format("FATAL: password authentication failed for user \"%s\"", PROFILE_USERNAME);;
-  private static final int FAILED_ATTEMPTS = 3;
+  private static final String USERNAME = "profile_user";
+  private static final String PASSWORD = "profile_password";
+  private static final String PROFILE_1_NAME = "prf1";
+  private static final String PROFILE_2_NAME = "prf2";
+  private static final int PRF_1_FAILED_ATTEMPTS = 3;
+  private static final int PRF_2_FAILED_ATTEMPTS = 2;
 
   @Override
   protected Map<String, String> getTServerFlags() {
@@ -48,7 +48,7 @@ public class TestYbRoleProfile extends BasePgSQLTest {
     return flagMap;
   }
 
-  private void attemptLogin(String username, String password, String expectedError) throws Exception {
+  private void attemptLogin(String username, String password) throws Exception {
     try {
       getConnectionBuilder()
         .withTServer(0)
@@ -56,10 +56,7 @@ public class TestYbRoleProfile extends BasePgSQLTest {
         .withPassword(password)
         .connect();
     } catch (PSQLException e) {
-      if (expectedError == null)
-        throw e;
-
-      assertEquals(expectedError, e.getMessage());
+      assertEquals(String.format("FATAL: password authentication failed for user \"%s\"", username), e.getMessage());
     }
   }
 
@@ -88,96 +85,161 @@ public class TestYbRoleProfile extends BasePgSQLTest {
     }
   }
 
-  private void unlockUser(String username) throws Exception {
+
+
+  private String getProfileName(String username) throws Exception {
     try (Statement stmt = connection.createStatement()) {
-      stmt.execute(String.format("ALTER USER %s PROFILE ENABLE", PROFILE_USERNAME));
+      ResultSet result = stmt.executeQuery(String.format("SELECT prfname " +
+                                                         "FROM pg_yb_role_profile rp " +
+                                                         "JOIN pg_roles rol ON rp.rolid = rol.oid " +
+                                                         "JOIN pg_yb_profile lp ON rp.prfid = lp.oid " +
+                                                         "WHERE rol.rolname = '%s'",
+                                                         username));
+      while (result.next()) {
+        return result.getString("prfname");
+      }
+    }
+    return null;
+  }
+
+  private void enableUserProfile(String username) throws Exception {
+    try (Statement stmt = connection.createStatement()) {
+      stmt.execute(String.format("ALTER USER %s PROFILE ENABLE", username));
     }
   }
 
-  private void lockUser(String username) throws Exception {
+  private void disableUserProfile(String username) throws Exception {
     try (Statement stmt = connection.createStatement()) {
-      stmt.execute(String.format("ALTER USER %s PROFILE DISABLE", PROFILE_USERNAME));
+      stmt.execute(String.format("ALTER USER %s PROFILE DISABLE", username));
+    }
+  }
+
+  private void detachUserProfile(String username) throws Exception {
+    try (Statement stmt = connection.createStatement()) {
+      stmt.execute(String.format("ALTER USER %s PROFILE DETACH", username));
+    }
+  }
+
+  private void attachUserProfile(String username, String profilename) throws Exception {
+    try (Statement stmt = connection.createStatement()) {
+      stmt.execute(String.format("ALTER USER %s PROFILE ATTACH %s", username, profilename));
     }
   }
 
   @After
   public void cleanup() throws Exception {
     try (Statement stmt = connection.createStatement()) {
-      stmt.execute(String.format("DROP USER %s", PROFILE_USERNAME));
-      stmt.execute(String.format("DROP PROFILE %s", PROFILE_NAME));
+      stmt.execute(String.format("ALTER USER %s PROFILE DETACH", USERNAME));
+      stmt.execute(String.format("DROP PROFILE %s", PROFILE_1_NAME));
+      stmt.execute(String.format("DROP PROFILE %s", PROFILE_2_NAME));
+      stmt.execute(String.format("DROP USER %s", USERNAME));
     }
   }
 
   @Before
   public void setup() throws Exception {
     try (Statement stmt = connection.createStatement()) {
-      stmt.execute(String.format("CREATE USER %s PASSWORD '%s'", PROFILE_USERNAME, PROFILE_USER_PASS));
-      stmt.execute(String.format("CREATE PROFILE %s FAILED ATTEMPTS %d", PROFILE_NAME, FAILED_ATTEMPTS));
-      stmt.execute(String.format("ALTER USER %s PROFILE ATTACH %s", PROFILE_USERNAME, PROFILE_NAME));
+      stmt.execute(String.format("CREATE USER %s PASSWORD '%s'", USERNAME, PASSWORD));
+      stmt.execute(String.format("CREATE PROFILE %s FAILED ATTEMPTS %d", PROFILE_1_NAME, PRF_1_FAILED_ATTEMPTS));
+      stmt.execute(String.format("CREATE PROFILE %s FAILED ATTEMPTS %d", PROFILE_2_NAME, PRF_2_FAILED_ATTEMPTS));
+      stmt.execute(String.format("ALTER USER %s PROFILE ATTACH %s", USERNAME, PROFILE_1_NAME));
     }
   }
 
   @Test
-  public void testAdminCanUnlock() throws Exception {
-    /* Exceed the failed attempts limit */
-    for (int i = 0; i < FAILED_ATTEMPTS + 1; i++) {
-      attemptLogin(PROFILE_USERNAME, "wrong", AUTHENTICATION_FAILED_MESSAGE);
+  public void testAdminCanChangeUserProfile() throws Exception {
+    assertEquals(PROFILE_1_NAME, getProfileName(USERNAME));
+
+    /* Now exceed the failed attempts limit */
+    for (int i = 0; i < PRF_1_FAILED_ATTEMPTS + 1; i++) {
+      assertProfileStateForUser(USERNAME, i, true);
+      attemptLogin(USERNAME, "wrong");
     }
-    assertProfileStateForUser(PROFILE_USERNAME, FAILED_ATTEMPTS + 1, false);
+    assertProfileStateForUser(USERNAME, PRF_1_FAILED_ATTEMPTS + 1, false);
 
-    /* Now the user cannot login */
-    attemptLogin(PROFILE_USERNAME, PROFILE_USER_PASS, AUTHENTICATION_FAILED_MESSAGE);
+    /* When the profile is removed, the user can log in again */
+    detachUserProfile(USERNAME);
+    assertEquals(null, getProfileName(USERNAME));
+    login(USERNAME, PASSWORD);
 
-    /* After an admin resets, the user can login again */
-    unlockUser(PROFILE_USERNAME);
-    assertProfileStateForUser(PROFILE_USERNAME, 0, true);
-    login(PROFILE_USERNAME, PROFILE_USER_PASS);
+    /* Then, if we change the profile, the user has only that many failed attempts */
+    attachUserProfile(USERNAME, PROFILE_2_NAME);
+    assertEquals(PROFILE_2_NAME, getProfileName(USERNAME));
+
+    /* Now exceed the failed attempts limit */
+    for (int i = 0; i < PRF_2_FAILED_ATTEMPTS + 1; i++) {
+      assertProfileStateForUser(USERNAME, i, true);
+      attemptLogin(USERNAME, "wrong");
+    }
+    assertProfileStateForUser(USERNAME, PRF_2_FAILED_ATTEMPTS + 1, false);
   }
 
   @Test
-  public void testAdminCanLockAndUnlock() throws Exception {
+  public void testRegularUserCanFailLoginManyTimes() throws Exception {
+    for (int i = 0; i < 10; i++) {
+      attemptLogin(TEST_PG_USER, "wrong");
+    }
+    attemptLogin(TEST_PG_USER, TEST_PG_PASS);
+  }
+
+  @Test
+  public void testAdminCanEnable() throws Exception {
     /* Exceed the failed attempts limit */
-    lockUser(PROFILE_USERNAME);
-    assertProfileStateForUser(PROFILE_USERNAME, 0, false);
+    for (int i = 0; i < PRF_1_FAILED_ATTEMPTS + 1; i++) {
+      attemptLogin(USERNAME, "wrong");
+    }
+    assertProfileStateForUser(USERNAME, PRF_1_FAILED_ATTEMPTS + 1, false);
 
     /* Now the user cannot login */
-    attemptLogin(PROFILE_USERNAME, PROFILE_USER_PASS, AUTHENTICATION_FAILED_MESSAGE);
+    attemptLogin(USERNAME, PASSWORD);
 
     /* After an admin resets, the user can login again */
-    unlockUser(PROFILE_USERNAME);
-    assertProfileStateForUser(PROFILE_USERNAME, 0, true);
-    login(PROFILE_USERNAME, PROFILE_USER_PASS);
+    enableUserProfile(USERNAME);
+    assertProfileStateForUser(USERNAME, 0, true);
+    login(USERNAME, PASSWORD);
+  }
+
+  @Test
+  public void testAdminCanDisableAndEnable() throws Exception {
+    disableUserProfile(USERNAME);
+
+    /* With a disabled profile, the user cannot login */
+    assertProfileStateForUser(USERNAME, 0, false);
+    attemptLogin(USERNAME, PASSWORD);
+
+    /* After an admin enables, the user can login again */
+    enableUserProfile(USERNAME);
+    assertProfileStateForUser(USERNAME, 0, true);
+    login(USERNAME, PASSWORD);
   }
 
   @Test
   public void testLogin() throws Exception {
-    assertProfileStateForUser(PROFILE_USERNAME, 0, true);
-
-    login(PROFILE_USERNAME, PROFILE_USER_PASS);
-    assertProfileStateForUser(PROFILE_USERNAME, 0, true);
+    /* The initial state allows logins */
+    assertProfileStateForUser(USERNAME, 0, true);
+    login(USERNAME, PASSWORD);
 
     /* Use up all allowed failed attempts */
-    for (int i = 0; i < FAILED_ATTEMPTS; i++) {
-      attemptLogin(PROFILE_USERNAME, "wrong", AUTHENTICATION_FAILED_MESSAGE);
-      assertProfileStateForUser(PROFILE_USERNAME, i + 1, true);
+    for (int i = 0; i < PRF_1_FAILED_ATTEMPTS; i++) {
+      assertProfileStateForUser(USERNAME, i, true);
+      attemptLogin(USERNAME, "wrong");
     }
+    assertProfileStateForUser(USERNAME, PRF_1_FAILED_ATTEMPTS, true);
 
     /* A successful login wipes the slate clean */
-    login(PROFILE_USERNAME, PROFILE_USER_PASS);
-    assertProfileStateForUser(PROFILE_USERNAME, 0, true);
+    login(USERNAME, PASSWORD);
+    assertProfileStateForUser(USERNAME, 0, true);
 
     /* Now exceed the failed attempts limit */
-    for (int i = 0; i < FAILED_ATTEMPTS + 1; i++) {
-      assertProfileStateForUser(PROFILE_USERNAME, i, true);
-      attemptLogin(PROFILE_USERNAME, "wrong", AUTHENTICATION_FAILED_MESSAGE);
+    for (int i = 0; i < PRF_1_FAILED_ATTEMPTS + 1; i++) {
+      assertProfileStateForUser(USERNAME, i, true);
+      attemptLogin(USERNAME, "wrong");
     }
-    assertProfileStateForUser(PROFILE_USERNAME, FAILED_ATTEMPTS + 1, false);
+    assertProfileStateForUser(USERNAME, PRF_1_FAILED_ATTEMPTS + 1, false);
 
-    /* A correct password gives a different error message and does not increment the failed counts*/
-    attemptLogin(PROFILE_USERNAME, PROFILE_USER_PASS, AUTHENTICATION_FAILED_MESSAGE);
-    assertProfileStateForUser(PROFILE_USERNAME, FAILED_ATTEMPTS + 2, false);
-
-    attemptLogin(PROFILE_USERNAME, "wrong", AUTHENTICATION_FAILED_MESSAGE);
-    assertProfileStateForUser(PROFILE_USERNAME, FAILED_ATTEMPTS + 3, false);
+    /* Now even the correct password will not let us in */
+    attemptLogin(USERNAME, PASSWORD);
+    attemptLogin(USERNAME, "wrong");
+    assertProfileStateForUser(USERNAME, PRF_1_FAILED_ATTEMPTS + 3, false);
   }
 }
