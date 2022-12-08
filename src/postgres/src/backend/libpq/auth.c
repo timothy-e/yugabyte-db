@@ -361,7 +361,6 @@ auth_failed(Port *port, int status, char *logdetail)
 	/* doesn't return */
 }
 
-
 /*
  * Client authentication starts here.  If there is an error, this
  * function does not return and the backend process is terminated.
