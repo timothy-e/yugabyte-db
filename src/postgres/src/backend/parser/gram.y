@@ -1127,23 +1127,33 @@ AlterOptRoleElem:
 				}
 			| PROFILE DETACH
 				{
+					if (!*YBCGetGFlags()->ysql_enable_profile)
+						parser_ybc_not_support(@1, "PROFILE");
 					$$ = makeDefElem("detach", (Node *)makeInteger(true), @1);
 				}
 			| PROFILE ATTACH name
 				{
+					if (!*YBCGetGFlags()->ysql_enable_profile)
+						parser_ybc_not_support(@1, "PROFILE");
 					$$ = makeDefElem("profile", (Node *)makeString($3), @1);
 				}
 			| PROFILE ENABLE_P
 				{
+					if (!*YBCGetGFlags()->ysql_enable_profile)
+						parser_ybc_not_support(@1, "PROFILE");
 					$$ = makeDefElem("enabled", (Node *)makeInteger(true), @1);
 				}
 			| PROFILE DISABLE_P
 				{
+					if (!*YBCGetGFlags()->ysql_enable_profile)
+						parser_ybc_not_support(@1, "PROFILE");
 					$$ = makeDefElem("enabled", (Node *)makeInteger(false), @1);
 				}
-            /* CAUTION: DEV RULE to test increment failed attempts counter and disable profile */     
+				/* CAUTION: DEV RULE to test increment failed attempts counter and disable profile */
 			| PROFILE ATTEMPTS FAILED
 				{
+					if (!*YBCGetGFlags()->ysql_enable_profile)
+						parser_ybc_not_support(@1, "PROFILE");
 					$$ = makeDefElem("TEST_failed_attempt", (Node *)makeInteger(false), @1);
 				}
 			| IDENT
@@ -4852,6 +4862,8 @@ DropTableSpaceStmt: DROP TABLESPACE name
 
 CreateProfileStmt: CREATE PROFILE name FAILED ATTEMPTS SignedIconst
 				{
+					if (!*YBCGetGFlags()->ysql_enable_profile)
+						parser_ybc_not_support(@1, "PROFILE");
 					CreateProfileStmt *n = makeNode(CreateProfileStmt);
 					n->prfname = $3;
 					n->prffailedloginattempts = makeInteger($6);
@@ -6857,7 +6869,12 @@ drop_type_name:
 					parser_ybc_beta_feature(@1, "tablegroup", true);
 					$$ = OBJECT_YBTABLEGROUP;
 				}
-			| PROFILE { $$ = OBJECT_PROFILE; }
+			| PROFILE
+				{
+					if (!*YBCGetGFlags()->ysql_enable_profile)
+						parser_ybc_not_support(@1, "PROFILE");
+					$$ = OBJECT_PROFILE;
+				}
 		;
 
 /* object types attached to a table */

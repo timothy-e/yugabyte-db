@@ -147,6 +147,3 @@ DEFINE_int32(ysql_num_databases_reserved_in_db_catalog_version_mode, 10,
              "fail the create database statement.");
 TAG_FLAG(ysql_num_databases_reserved_in_db_catalog_version_mode, advanced);
 TAG_FLAG(ysql_num_databases_reserved_in_db_catalog_version_mode, hidden);
-
-DEFINE_bool(
-    ysql_feature_profile, false, "Whether to enable profiles feature for role auth");

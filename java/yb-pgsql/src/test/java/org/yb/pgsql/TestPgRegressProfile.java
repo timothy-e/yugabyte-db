@@ -28,14 +28,14 @@ public class TestPgRegressProfile extends BasePgSQLTest {
     @Override
     protected Map<String, String> getMasterFlags() {
         Map<String, String> flagMap = super.getMasterFlags();
-        flagMap.put("ysql_feature_profile", "true");
+        flagMap.put("ysql_enable_profile", "true");
         return flagMap;
     }
 
     @Override
     protected Map<String, String> getTServerFlags() {
         Map<String, String> flagMap = super.getTServerFlags();
-        flagMap.put("ysql_feature_profile", "true");
+        flagMap.put("ysql_enable_profile", "true");
         return flagMap;
     }
 
