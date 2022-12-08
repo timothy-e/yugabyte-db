@@ -686,6 +686,10 @@ InitPostgresImpl(const char *in_dbname, Oid dboid, const char *username,
 
 	if (IsYugaByteEnabled() && !bootstrap)
 	{
+		HandleYBStatus(YBCPgTableExists(TemplateDbOid,
+										YbRoleProfileRelationId,
+										&YbLoginProfileCatalogsExist));
+
 		const uint64_t catalog_master_version =
 			YbGetCatalogCacheVersionForTablePrefetching();
 		YBCPgResetCatalogReadTime();
@@ -699,10 +703,14 @@ InitPostgresImpl(const char *in_dbname, Oid dboid, const char *username,
 				DbRoleSettingRelationId); // pg_db_role_setting
 		YbRegisterSysTableForPrefetching(
 				AuthMemRelationId);       // pg_auth_members
-		YbRegisterSysTableForPrefetching(
-				YbProfileRelationId);       // pg_yb_profile
-		YbRegisterSysTableForPrefetching(
-				YbRoleProfileRelationId);       // pg_yb_role_profile
+
+		if (YbLoginProfileCatalogsExist)
+		{
+			YbRegisterSysTableForPrefetching(
+					YbProfileRelationId); // pg_yb_profile
+			YbRegisterSysTableForPrefetching(
+					YbRoleProfileRelationId);	// pg_yb_role_profile
+		}
 		YbTryRegisterCatalogVersionTableForPrefetching();
 
 		/*
