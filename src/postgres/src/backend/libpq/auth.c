@@ -19,6 +19,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include "catalog/pg_yb_role_profile.h"
 #include "commands/dbcommands.h"
 #include "executor/ybcModifyTable.h"
 #ifdef HAVE_SYS_SELECT_H
@@ -360,22 +361,6 @@ auth_failed(Port *port, int status, char *logdetail)
 	/* doesn't return */
 }
 
-
-static int
-track_login_attempts(Port* port, int status)
-{
-	HeapTuple roleTup;
-	/* Get role info from pg_authid */
-	roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
-	if (HeapTupleIsValid(roleTup))
-	{
-		Oid roleid = HeapTupleGetOid(roleTup);
-		elog(LOG, "Place holder to track login attempt for %d", roleid);
-		ReleaseSysCache(roleTup);
-	}
-	return status;
-}
-
 /*
  * Client authentication starts here.  If there is an error, this
  * function does not return and the backend process is terminated.
@@ -591,11 +576,11 @@ ClientAuthentication(Port *port)
 
 		case uaMD5:
 		case uaSCRAM:
-			status = track_login_attempts(port, CheckPWChallengeAuth(port, &logdetail));
+			status = CheckPWChallengeAuth(port, &logdetail);
 			break;
 
 		case uaPassword:
-			status = track_login_attempts(port, CheckPasswordAuth(port, &logdetail));
+			status = CheckPasswordAuth(port, &logdetail);
 			break;
 
 		case uaYbTserverKey:
@@ -649,35 +634,45 @@ ClientAuthentication(Port *port)
 	if (ClientAuthentication_hook)
 		(*ClientAuthentication_hook) (port, status);
 
-	HeapTuple roleTup;
+	bool profileisdisabled = false;
+	HeapTuple roleTup, profileTuple = NULL;
 	/* Get role info from pg_authid */
 	roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
-	if (status == STATUS_OK)
+	Oid roleid = InvalidOid;
+	if (HeapTupleIsValid(roleTup))
 	{
-		if (HeapTupleIsValid(roleTup))
+		roleid = HeapTupleGetOid(roleTup);
+		profileTuple = get_role_profile_tuple(roleid);
+		if (HeapTupleIsValid(profileTuple))
 		{
-			Oid roleid = HeapTupleGetOid(roleTup);
-			ReleaseSysCache(roleTup);
-			YBCResetFailedAttemptsIfAllowed(roleid);
+			Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile)
+										GETSTRUCT(profileTuple);
+			if (!rolprfform->rolisenabled)
+			{
+				profileisdisabled = true;
+			}
 		}
-		else
+	}
+	ReleaseSysCache(roleTup);
+
+	/*
+	 * If we're trying to log in to a user that has exceeded the failed login attempts,
+	 * shut it down.
+	 */
+
+	if (status == STATUS_OK && !profileisdisabled)
+	{
+		if (roleid != InvalidOid)
 		{
-			ReleaseSysCache(roleTup);
+			YBCResetFailedAttemptsIfAllowed(roleid);
 		}
 		sendAuthRequest(port, AUTH_REQ_OK, NULL, 0);
 	}
 	else
 	{
-		// Oid database_oid = 1; // get_database_oid(port->database_name, false);
-		if (HeapTupleIsValid(roleTup))
+		if (roleid != InvalidOid)
 		{
-			Oid roleid = HeapTupleGetOid(roleTup);
-			ReleaseSysCache(roleTup);
 			YBCIncFailedAttemptsAndMaybeDisableProfile(roleid);
-		}
-		else
-		{
-			ReleaseSysCache(roleTup);
 		}
 		auth_failed(port, status, logdetail);
 	}
