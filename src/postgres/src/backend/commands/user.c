@@ -762,7 +762,7 @@ AlterRole(AlterRoleStmt *stmt)
 			ereport(ERROR,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("must be superuser or a member of the yb_db_admin "
-							"role to change PROFILE configuration")));
+							"role to change profile configuration")));
 	}
 	else if (!have_createrole_privilege())
 	{
@@ -780,11 +780,11 @@ AlterRole(AlterRoleStmt *stmt)
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("permission denied")));
 	}
-	
+
 	if (profile != NULL || ddetach != NULL || denabled != NULL
 			|| dfailedattempt != NULL)
 	{
-		if (profile != NULL) 
+		if (profile != NULL)
 		{
 			CreateRoleProfile(roleid, rolename, profile);
 		}

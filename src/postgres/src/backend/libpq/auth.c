@@ -924,7 +924,7 @@ CheckMD5Auth(Port *port, char *shadow_pass, char **logdetail)
 		result = STATUS_ERROR;
 
 	pfree(passwd);
-	elog(LOG, "Auth succeeded? %d", result == STATUS_OK);
+
 	return result;
 }
 

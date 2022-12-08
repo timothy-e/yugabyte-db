@@ -8,13 +8,13 @@ CREATE PROFILE test_profile FAILED ATTEMPTS 3;
 ERROR:  permission denied to create profile "test_profile"
 HINT:  Must be superuser or a member of the yb_db_admin role to create a profile.
 ALTER USER restricted_user PROFILE ATTACH test_profile;
-ERROR:  must be superuser or a member of the yb_db_admin role to change PROFILE configuration
+ERROR:  must be superuser or a member of the yb_db_admin role to change profile configuration
 ALTER USER restricted_user PROFILE DISABLE;
-ERROR:  must be superuser or a member of the yb_db_admin role to change PROFILE configuration
+ERROR:  must be superuser or a member of the yb_db_admin role to change profile configuration
 ALTER USER restricted_user PROFILE ENABLE;
-ERROR:  must be superuser or a member of the yb_db_admin role to change PROFILE configuration
+ERROR:  must be superuser or a member of the yb_db_admin role to change profile configuration
 ALTER USER restricted_user PROFILE DETACH;
-ERROR:  must be superuser or a member of the yb_db_admin role to change PROFILE configuration
+ERROR:  must be superuser or a member of the yb_db_admin role to change profile configuration
 DROP PROFILE test_profile;
 ERROR:  profile "test_profile" does not exist
 DROP PROFILE existing_profile;

@@ -43,17 +43,17 @@
 #include "lib/stringinfo.h"
 #include "nodes/parsenodes.h"
 
-extern Oid CreateProfile(CreateProfileStmt *stmt);
+extern Oid CreateProfile(CreateProfileStmt* stmt);
 
-extern Oid	 get_profile_oid(const char *prfname, bool missing_ok);
-extern char *get_profile_name(Oid prf_oid);
+extern Oid	 get_profile_oid(const char* prfname, bool missing_ok);
+extern char* get_profile_name(Oid prf_oid);
 
 extern void RemoveProfileById(Oid prf_oid);
 
 extern Oid CreateRoleProfile(Oid rolid, const char* rolname,
 		const char* profile);
-extern Oid EnableRoleProfile(Oid roleid, const char* rolename, bool isEnabled);
-extern Oid IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char* rolename);
+extern Oid EnableRoleProfile(Oid roleid, const char* rolname, bool isEnabled);
+extern Oid IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char* rolname);
 extern void YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid);
 extern void YBCResetFailedAttemptsIfAllowed(Oid roleid);
 
