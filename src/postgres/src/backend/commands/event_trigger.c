@@ -1122,7 +1122,7 @@ EventTriggerSupportsObjectType(ObjectType obtype)
 			return false;
 		case OBJECT_YBTABLEGROUP:
 		case OBJECT_PROFILE:
-			/* no support for event triggers on tablegroups */
+			/* no support for event triggers on tablegroups or profile*/
 			return false;
 		case OBJECT_ACCESS_METHOD:
 		case OBJECT_AGGREGATE:

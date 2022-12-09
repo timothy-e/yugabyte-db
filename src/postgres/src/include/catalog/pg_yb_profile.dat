@@ -13,5 +13,4 @@
 
 { oid => '8057', prfname => 'default', prffailedloginattempts => '0', prfpasswordlocktime => '0' },
 
-
 ]

@@ -14,8 +14,8 @@
  *
  *-------------------------------------------------------------------------
  */
-#ifndef PG_YB_LOGIN_PROFILE_H
-#define PG_YB_LOGIN_PROFILE_H
+#ifndef PG_YB_PROFILE_H
+#define PG_YB_PROFILE_H
 
 #include "catalog/genbki.h"
 #include "catalog/pg_yb_profile_d.h"

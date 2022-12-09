@@ -419,7 +419,6 @@ typedef enum NodeTag
 	T_CreateSubscriptionStmt,
 	T_AlterSubscriptionStmt,
 	T_DropSubscriptionStmt,
-	T_CreateProfileStmt,
 	T_CreateStatsStmt,
 	T_AlterCollationStmt,
 	T_CallStmt,
@@ -523,7 +522,8 @@ typedef enum NodeTag
 	T_YbSeqScan,
 	T_YbSeqScanState,
 	T_YbBatchedNestLoop,
-	T_YbBatchedNestLoopState
+	T_YbBatchedNestLoopState,
+	T_CreateProfileStmt
 
 } NodeTag;
 
