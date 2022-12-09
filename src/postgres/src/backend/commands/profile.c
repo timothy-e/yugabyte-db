@@ -85,6 +85,21 @@
 #include "pg_yb_utils.h"
 
 #define DEFAULT_PROFILE_OID 8057
+
+static void
+CheckProfileCatalogsExist()
+{
+	/*
+	 * First check that the pg_yb_profile or pg_yb_role_profile catalogs
+	 * actually exist.
+	 */
+	if (!YbLoginProfileCatalogsExist) {
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("Login profile system catalogs do not exist.")));
+	}
+}
+
 /*
  * Create a profile.
  */
@@ -96,6 +111,8 @@ CreateProfile(CreateProfileStmt *stmt)
 	bool	  nulls[Natts_pg_yb_profile];
 	HeapTuple tuple;
 	Oid		  prfoid;
+
+	CheckProfileCatalogsExist();
 
 	/* Must be super user or yb_db_admin role */
 	if (!superuser() && !IsYbDbAdminUser(GetUserId()))
@@ -154,6 +171,8 @@ get_profile_oid(const char *prfname, bool missing_ok)
 	HeapTuple	 tuple;
 	ScanKeyData	 entry[1];
 
+	CheckProfileCatalogsExist();
+
 	/*
 	 * Search pg_yb_profile.
 	 */
@@ -180,6 +199,12 @@ get_profile_oid(const char *prfname, bool missing_ok)
 	return result;
 }
 
+/*
+ * This function does not check that the profile tables exist. It is either
+ * called before the database is initalized, or as a helper for another
+ * function that should do this verification. In either case, it is up to the
+ * caller to verify that this function can do the right thing.
+ */
 HeapTuple
 get_profile_tuple(Oid prfoid)
 {
@@ -219,6 +244,8 @@ get_profile_name(Oid prfoid)
 	char	 *result;
 	HeapTuple tuple;
 
+	CheckProfileCatalogsExist();
+
 	tuple = get_profile_tuple(prfoid);
 
 	/* We assume that there can be at most one matching tuple */
@@ -244,6 +271,8 @@ RemoveProfileById(Oid prf_oid)
 	HeapScanDesc scandesc;
 	ScanKeyData	 skey[1];
 	HeapTuple	 tuple;
+
+	CheckProfileCatalogsExist();
 
 	if (prf_oid == DEFAULT_PROFILE_OID)
 	{
@@ -300,6 +329,8 @@ CreateRoleProfile(Oid rolid, const char* rolname, const char* prfname)
 	bool	  nulls[Natts_pg_yb_role_profile];
 	HeapTuple tuple;
 	Oid		  rolprfoid;
+
+	CheckProfileCatalogsExist();
 
 	/* Must be super user or yb_db_admin role */
 	if (!superuser() && !IsYbDbAdminUser(GetUserId()))
@@ -390,6 +421,8 @@ get_role_oid_from_role_profile(Oid rolprfoid)
 	ScanKeyData	 skey[1];
 	Oid roleid;
 
+	CheckProfileCatalogsExist();
+
 	/*
 	 * Search pg_yb_role_profile.
 	 */
@@ -418,6 +451,12 @@ get_role_oid_from_role_profile(Oid rolprfoid)
 	return roleid;
 }
 
+/*
+ * This function does not check that the profile tables exist. It is either
+ * called before the database is initalized, or as a helper for another
+ * function that should do this verification. In either case, it is up to the
+ * caller to verify that this function can do the right thing.
+ */
 HeapTuple
 get_role_profile_tuple(Oid rolid)
 {
@@ -459,6 +498,8 @@ get_role_profile_oid(Oid rolid, const char* rolname, bool missing_ok)
 	Oid			 result;
 	HeapTuple	 tuple;
 
+	CheckProfileCatalogsExist();
+
 	tuple = get_role_profile_tuple(rolid);
 
 	/* We assume that there can be at most one matching tuple */
@@ -490,6 +531,8 @@ update_role_profile(Oid roleid, const char* rolename, Datum *new_record,
 	TupleDesc	pg_yb_role_profile_dsc;
 	HeapTuple	tuple, new_tuple;
 	Oid 		roleprfid;
+
+	CheckProfileCatalogsExist();
 
 	pg_yb_role_profile_rel = heap_open(YbRoleProfileRelationId, RowExclusiveLock);
 	pg_yb_role_profile_dsc = RelationGetDescr(pg_yb_role_profile_rel);
@@ -536,6 +579,8 @@ EnableRoleProfile(Oid roleid, const char* rolename, bool isEnabled)
 	bool		new_record_nulls[Natts_pg_yb_role_profile];
 	bool		new_record_repl[Natts_pg_yb_role_profile];
 
+	CheckProfileCatalogsExist();
+
 	/*
 	 * Build an updated tuple with isEnabled set to the new value
 	 */
@@ -554,20 +599,25 @@ EnableRoleProfile(Oid roleid, const char* rolename, bool isEnabled)
 
 /*
  * YBCResetFailedAttemptsIfAllowed - reset failed_attempts counter
+ * This function does not check that the table exists. Since it is called
+ * before the database is initialized, it expects its caller to verify that
+ * the profile tables exist.
  *
  * roleid - the oid of the role
  */
 void
 YBCResetFailedAttemptsIfAllowed(Oid roleid)
 {
-	HeapTuple rolprftuple = get_role_profile_tuple(roleid);
+	HeapTuple rolprftuple;
+	Form_pg_yb_role_profile rolprfform;
+
+	rolprftuple = get_role_profile_tuple(roleid);
 
 	if (!HeapTupleIsValid(rolprftuple))
 		// Role is not associated with a profile.
 		return;
 
-	Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile)
-									GETSTRUCT(rolprftuple);
+	rolprfform = (Form_pg_yb_role_profile) GETSTRUCT(rolprftuple);
 
 	if (rolprfform->rolisenabled)
 		YBCExecuteUpdateLoginAttempts(roleid, 0, true);
@@ -586,6 +636,8 @@ IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char* rolename)
 	Datum		new_record[Natts_pg_yb_role_profile];
 	bool		new_record_nulls[Natts_pg_yb_role_profile];
 	bool		new_record_repl[Natts_pg_yb_role_profile];
+
+	CheckProfileCatalogsExist();
 
 	/*
 	 * Build an updated tuple with isEnabled set to the new value
@@ -632,34 +684,44 @@ IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char* rolename)
 /*
  * YBCIncFailedAttemptsAndMaybeDisableProfile - increment failed_attempts
  * counter and disable if it exceeds limit
+ * This function does not check that the table exists. Since it is called
+ * before the database is initialized, it expects its caller to verify that
+ * the profile tables exist.
  *
  * roleid - the oid of the role
  */
 void
 YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
 {
-	HeapTuple rolprftuple = get_role_profile_tuple(roleid);
+	HeapTuple 				rolprftuple;
+	Form_pg_yb_role_profile rolprfform;
+	Form_pg_yb_profile 		prfform;
+	HeapTuple 				prftuple;
+	int 					failed_attempts;
+	int 					failed_attempts_limit;
+	bool 					rolisenabled;
+
+	rolprftuple = get_role_profile_tuple(roleid);
 
 	if (!HeapTupleIsValid(rolprftuple))
 		// Role is not associated with a profile.
 		return;
 
-	Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile)
-									GETSTRUCT(rolprftuple);
+	rolprfform = (Form_pg_yb_role_profile) GETSTRUCT(rolprftuple);
 
-	HeapTuple prftuple = get_profile_tuple(DatumGetObjectId(rolprfform->prfid));
+	prftuple = get_profile_tuple(DatumGetObjectId(rolprfform->prfid));
 	if (!HeapTupleIsValid(prftuple))
 		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
 						errmsg("Profile \"%d\" not found!",
 							roleid)));
 
-	Form_pg_yb_profile prfform = (Form_pg_yb_profile) GETSTRUCT(prftuple);
+	prfform = (Form_pg_yb_profile) GETSTRUCT(prftuple);
 
-	int failed_attempts = DatumGetInt16(rolprfform->rolfailedloginattempts) + 1;
-	int failed_attempts_limit = DatumGetInt16(prfform->prffailedloginattempts);
+	failed_attempts = DatumGetInt16(rolprfform->rolfailedloginattempts) + 1;
+	failed_attempts_limit = DatumGetInt16(prfform->prffailedloginattempts);
 
 	// Keep role enabled IFF role is enabled AND failed attempts < limit
-	bool rolisenabled = rolprfform->rolisenabled &&
+	rolisenabled = rolprfform->rolisenabled &&
 						(failed_attempts <= failed_attempts_limit);
 
 	YBCExecuteUpdateLoginAttempts(roleid, failed_attempts, rolisenabled);
@@ -675,9 +737,11 @@ void
 RemoveRoleProfileForRole(Oid roleid, const char* rolename)
 {
 	Oid roleprfoid;
+	ObjectAddress myself;
+
+	CheckProfileCatalogsExist();
 
 	roleprfoid = get_role_profile_oid(roleid, rolename, false);
-	ObjectAddress myself;
 
 	myself.classId = YbRoleProfileRelationId;
 	myself.objectId = roleprfoid;
@@ -688,11 +752,12 @@ RemoveRoleProfileForRole(Oid roleid, const char* rolename)
 
 void RemoveRoleProfileById(Oid roleprfoid)
 {
-
 	Relation	 rel;
 	HeapScanDesc scandesc;
 	ScanKeyData	 skey[1];
 	HeapTuple	 tuple;
+
+	CheckProfileCatalogsExist();
 
 	rel = heap_open(YbRoleProfileRelationId, RowExclusiveLock);
 

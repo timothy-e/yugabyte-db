@@ -1941,8 +1941,12 @@ YBPreloadRelCache()
 	YbRegisterSysTableForPrefetching(TypeRelationId);                  // pg_type
 	YbRegisterSysTableForPrefetching(NamespaceRelationId);             // pg_namespace
 	YbRegisterSysTableForPrefetching(AuthIdRelationId);                // pg_authid
-	YbRegisterSysTableForPrefetching(YbProfileRelationId);             // yb_pg_profile
-	YbRegisterSysTableForPrefetching(YbRoleProfileRelationId);         // yb_pg_role_profile
+
+	if (YbLoginProfileCatalogsExist)
+	{
+		YbRegisterSysTableForPrefetching(YbProfileRelationId);         // yb_pg_profile
+		YbRegisterSysTableForPrefetching(YbRoleProfileRelationId);     // yb_pg_role_profile
+	}
 
 	if (!YBIsDBConnectionValid())
 		ereport(FATAL,
@@ -4129,8 +4133,8 @@ RelationBuildLocalRelation(const char *relname,
 	 * to the set of shared relations.
 	 */
 	if (shared_relation != IsSharedRelation(relid) && !yb_test_system_catalogs_creation)
-		elog(ERROR, "shared_relation flag for \"%s\" does not match IsSharedRelation(%u)",
-			 relname, relid);
+		elog(ERROR, "shared_relation flag for \"%s\" (%s) does not match IsSharedRelation(%u) (%s)",
+			 relname, shared_relation ? "true" : "false", relid, IsSharedRelation(relid) ? "true" : "false");
 
 	/* (Non-YB) shared relations had better be mapped, too */
 	Assert(IsYugaByteEnabled() ||
@@ -4515,12 +4519,15 @@ RelationCacheInitializePhase2(void)
 				  false, Natts_pg_shseclabel, Desc_pg_shseclabel);
 		formrdesc("pg_subscription", SubscriptionRelation_Rowtype_Id, true,
 				  true, Natts_pg_subscription, Desc_pg_subscription);
-		formrdesc("pg_yb_profile", YbProfileRelation_Rowtype_Id, true,
-				  true, Natts_pg_yb_profile, Desc_pg_yb_profile);
-		formrdesc("pg_yb_role_profile", YbRoleProfileRelation_Rowtype_Id, true,
-				  true, Natts_pg_yb_role_profile, Desc_pg_yb_role_profile);
+		if (YbLoginProfileCatalogsExist)
+		{
+			formrdesc("pg_yb_profile", YbProfileRelation_Rowtype_Id, true,
+					true, Natts_pg_yb_profile, Desc_pg_yb_profile);
+			formrdesc("pg_yb_role_profile", YbRoleProfileRelation_Rowtype_Id, true,
+					true, Natts_pg_yb_role_profile, Desc_pg_yb_role_profile);
+		}
 
-#define NUM_CRITICAL_SHARED_RELS	7	/* fix if you change list above */
+#define NUM_CRITICAL_SHARED_RELS    (YbLoginProfileCatalogsExist ? 7 : 5)   /* fix if you change list above */
 	}
 
 	MemoryContextSwitchTo(oldcxt);
