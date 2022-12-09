@@ -632,14 +632,15 @@ ClientAuthentication(Port *port)
 	if (ClientAuthentication_hook)
 		(*ClientAuthentication_hook) (port, status);
 
-	// Check Profile for the user only if the feature is enabled
-	if (*YBCGetGFlags()->ysql_enable_profile)
+
+	if (*YBCGetGFlags()->ysql_enable_profile && YbLoginProfileCatalogsExist)
 	{
 		bool profileisdisabled = false;
 		HeapTuple roleTup, profileTuple = NULL;
+		Oid roleid = InvalidOid;
+
 		/* Get role info from pg_authid */
 		roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
-		Oid roleid = InvalidOid;
 		if (HeapTupleIsValid(roleTup))
 		{
 			roleid = HeapTupleGetOid(roleTup);
@@ -655,11 +656,6 @@ ClientAuthentication(Port *port)
 			}
 		}
 		ReleaseSysCache(roleTup);
-
-		/*
-		* If we're trying to log in to a user that has exceeded the 
-		* failed login attempts, shut it down.
-		*/
 
 		if (status == STATUS_OK && !profileisdisabled)
 		{

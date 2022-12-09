@@ -1659,7 +1659,6 @@ public class TestYsqlUpgrade extends BasePgSQLTest {
                                   pgTypeNameByOidMap.get(r.getLong(2)));
                             case "pg_opclass":
                             case "pg_opfamily":
-                            case "pg_yb_profile":
                               return r.getString(2);
                             default:
                               return r.getString(1);
