@@ -1175,11 +1175,6 @@ get_object_address_unqualified(ObjectType objtype,
 			address.objectId = get_extension_oid(name, missing_ok);
 			address.objectSubId = 0;
 			break;
-		case OBJECT_PROFILE:
-			address.classId = YbProfileRelationId;
-			address.objectId = get_profile_oid(name, missing_ok);
-			address.objectSubId = 0;
-			break;
 		case OBJECT_YBTABLEGROUP:
 			address.classId = YbTablegroupRelationId;
 			address.objectId = get_tablegroup_oid(name, missing_ok);
@@ -1228,6 +1223,11 @@ get_object_address_unqualified(ObjectType objtype,
 		case OBJECT_SUBSCRIPTION:
 			address.classId = SubscriptionRelationId;
 			address.objectId = get_subscription_oid(name, missing_ok);
+			address.objectSubId = 0;
+			break;
+		case OBJECT_PROFILE:
+			address.classId = YbProfileRelationId;
+			address.objectId = get_profile_oid(name, missing_ok);
 			address.objectSubId = 0;
 			break;
 		default:
@@ -3653,25 +3653,16 @@ getObjectDescription(const ObjectAddress *object)
 			{
 				char	   *profile;
 				profile = get_profile_name(object->objectId);
-				if (!profile)
-					elog(ERROR, "could not find tuple for profile %u",
-						 object->objectId);
 				appendStringInfo(&buffer, _("profile %s"), profile);
 				break;
 			}
 		case OCLASS_ROLE_PROFILE:
 			{
 				Oid roleid = get_role_oid_from_role_profile(object->objectId);
-				if (roleid == InvalidOid)
-					elog(ERROR, "could not find tuple for role profile %u",
-						 object->objectId);
 				appendStringInfo(&buffer, _("a profile is attached to role %s"),
 								 GetUserNameFromId(roleid, false));
 				break;
 			}
-
-
-
 			/*
 			 * There's intentionally no default: case here; we want the
 			 * compiler to warn if a new OCLASS hasn't been handled above.
@@ -5258,9 +5249,6 @@ getObjectIdentityParts(const ObjectAddress *object,
 			{
 				char	   *profile;
 				profile = get_profile_name(object->objectId);
-				if (!profile)
-					elog(ERROR, "cache lookup failed for profile %u",
-						 object->objectId);
 				if (objname)
 					*objname = list_make1(profile);
 				appendStringInfoString(&buffer,

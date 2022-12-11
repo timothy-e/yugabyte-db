@@ -93,11 +93,10 @@ CheckProfileCatalogsExist()
 	 * First check that the pg_yb_profile or pg_yb_role_profile catalogs
 	 * actually exist.
 	 */
-	if (!YbLoginProfileCatalogsExist) {
+	if (!YbLoginProfileCatalogsExist)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("Login profile system catalogs do not exist.")));
-	}
 }
 
 /*
@@ -142,6 +141,7 @@ CreateProfile(CreateProfileStmt *stmt)
 		DirectFunctionCall1(namein, CStringGetDatum(stmt->prfname));
 	values[Anum_pg_yb_profile_prffailedloginattempts - 1] =
 		intVal(stmt->prffailedloginattempts);
+	// Lock time to 0 as it is not implemented yet.
 	values[Anum_pg_yb_profile_prfpasswordlocktime - 1] = 0;
 
 	tuple = heap_form_tuple(rel->rd_att, values, nulls);
@@ -213,6 +213,8 @@ get_profile_tuple(Oid prfoid)
 	HeapTuple	 tuple;
 	ScanKeyData	 entry[1];
 
+	CheckProfileCatalogsExist();
+
 	/*
 	 * Search pg_yb_role_profile.
 	 */
@@ -241,20 +243,15 @@ get_profile_tuple(Oid prfoid)
 char *
 get_profile_name(Oid prfoid)
 {
-	char	 *result;
 	HeapTuple tuple;
-
-	CheckProfileCatalogsExist();
 
 	tuple = get_profile_tuple(prfoid);
 
 	/* We assume that there can be at most one matching tuple */
-	if (HeapTupleIsValid(tuple))
-		result = pstrdup(NameStr(((Form_pg_yb_profile) GETSTRUCT(tuple))->prfname));
-	else
-		result = NULL;
+	if (!HeapTupleIsValid(tuple))
+		elog(ERROR, "could not find tuple for profile %u", prfoid);
 
-	return result;
+	return pstrdup(NameStr(((Form_pg_yb_profile) GETSTRUCT(tuple))->prfname));
 }
 
 /*
@@ -322,7 +319,7 @@ RemoveProfileById(Oid prf_oid)
  * Create a role profile.
  */
 Oid
-CreateRoleProfile(Oid rolid, const char* rolname, const char* prfname)
+CreateRoleProfile(Oid rolid, const char *rolname, const char *prfname)
 {
 	Relation  rel;
 	Datum	  values[Natts_pg_yb_role_profile];
@@ -364,7 +361,7 @@ CreateRoleProfile(Oid rolid, const char* rolname, const char* prfname)
 				 errmsg("profile \"%s\" does not exist", prfname)));
 
 	/*
-	 * Check that there isnt another entry for role profile
+	 * Check that there isn't another entry for role profile
 	 */
 	if (OidIsValid(get_role_profile_oid(rolid, rolname, true)))
 		ereport(ERROR,
@@ -434,7 +431,6 @@ get_role_oid_from_role_profile(Oid rolprfoid)
 	scandesc = heap_beginscan_catalog(rel, 1, skey);
 	tuple = heap_getnext(scandesc, ForwardScanDirection);
 
-	/* Must copy tuple before releasing buffer */
 	if (HeapTupleIsValid(tuple))
 	{
 		Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile)
@@ -447,6 +443,10 @@ get_role_oid_from_role_profile(Oid rolprfoid)
 
 	heap_endscan(scandesc);
 	heap_close(rel, AccessShareLock);
+
+	// Throw an error after ending the heap scan.
+	if (roleid == InvalidOid)
+		elog(ERROR, "could not find tuple for role profile %u", rolprfoid);
 
 	return roleid;
 }
@@ -464,6 +464,8 @@ get_role_profile_tuple(Oid rolid)
 	HeapScanDesc scandesc;
 	HeapTuple	 tuple;
 	ScanKeyData	 entry[1];
+
+	CheckProfileCatalogsExist();
 
 	/*
 	 * Search pg_yb_role_profile.
@@ -487,18 +489,17 @@ get_role_profile_tuple(Oid rolid)
 
 
 /*
- * get_role_profile_oid - given a role oid, look up the OID
+ * get_role_profile_oid - given a pg_auth oid, look up the mapping 
+ * in pg_yb_role_profile
  *
  * If missing_ok is false, throw an error if role profile is not found.
  * If true, just return InvalidOid.
  */
 Oid
-get_role_profile_oid(Oid rolid, const char* rolname, bool missing_ok)
+get_role_profile_oid(Oid rolid, const char *rolname, bool missing_ok)
 {
 	Oid			 result;
 	HeapTuple	 tuple;
-
-	CheckProfileCatalogsExist();
 
 	tuple = get_role_profile_tuple(rolid);
 
@@ -516,15 +517,9 @@ get_role_profile_oid(Oid rolid, const char* rolname, bool missing_ok)
 	return result;
 }
 
-/*
- * EnableRoleProfile - set rolisenabled flag
- *
- * roleid - the oid of the role
- * isenabled - bool value
- */
 Oid
-update_role_profile(Oid roleid, const char* rolename, Datum *new_record,
-		bool* new_record_nulls, bool* new_record_repl,
+update_role_profile(Oid roleid, const char *rolename, Datum *new_record,
+		bool *new_record_nulls, bool *new_record_repl,
 		bool missing_ok)
 {
 	Relation	pg_yb_role_profile_rel;
@@ -570,16 +565,15 @@ update_role_profile(Oid roleid, const char* rolename, Datum *new_record,
  * EnableRoleProfile - set rolisenabled flag
  *
  * roleid - the oid of the role
- * isenabled - bool value
+ * rolename - Name of the role. Used in the error message
+ * isEenabled - bool value
  */
 Oid
-EnableRoleProfile(Oid roleid, const char* rolename, bool isEnabled)
+EnableRoleProfile(Oid roleid, const char *rolename, bool isEnabled)
 {
 	Datum		new_record[Natts_pg_yb_role_profile];
 	bool		new_record_nulls[Natts_pg_yb_role_profile];
 	bool		new_record_repl[Natts_pg_yb_role_profile];
-
-	CheckProfileCatalogsExist();
 
 	/*
 	 * Build an updated tuple with isEnabled set to the new value
@@ -619,7 +613,7 @@ YBCResetFailedAttemptsIfAllowed(Oid roleid)
 
 	rolprfform = (Form_pg_yb_role_profile) GETSTRUCT(rolprftuple);
 
-	if (rolprfform->rolisenabled)
+	if (rolprfform->rolisenabled && rolprfform->rolfailedloginattempts > 0)
 		YBCExecuteUpdateLoginAttempts(roleid, 0, true);
 }
 
@@ -631,13 +625,11 @@ YBCResetFailedAttemptsIfAllowed(Oid roleid)
  * roleid - the oid of the role
  */
 Oid
-IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char* rolename)
+IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char *rolename)
 {
 	Datum		new_record[Natts_pg_yb_role_profile];
 	bool		new_record_nulls[Natts_pg_yb_role_profile];
 	bool		new_record_repl[Natts_pg_yb_role_profile];
-
-	CheckProfileCatalogsExist();
 
 	/*
 	 * Build an updated tuple with isEnabled set to the new value
@@ -658,7 +650,7 @@ IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char* rolename)
 	HeapTuple prftuple = get_profile_tuple(DatumGetObjectId(rolprfform->prfid));
 	if (!HeapTupleIsValid(prftuple))
 		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
-						errmsg("Profile \"%d\" not found!",
+						errmsg("profile \"%d\" not found!",
 							roleid)));
 
 	Form_pg_yb_profile prfform = (Form_pg_yb_profile) GETSTRUCT(prftuple);
@@ -734,12 +726,10 @@ YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
  * rolprfoid - the oid of the role_profile entry.
  */
 void
-RemoveRoleProfileForRole(Oid roleid, const char* rolename)
+RemoveRoleProfileForRole(Oid roleid, const char *rolename)
 {
 	Oid roleprfoid;
 	ObjectAddress myself;
-
-	CheckProfileCatalogsExist();
 
 	roleprfoid = get_role_profile_oid(roleid, rolename, false);
 

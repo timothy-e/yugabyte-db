@@ -28,8 +28,8 @@
 CATALOG(pg_yb_profile,8051,YbProfileRelationId) BKI_SHARED_RELATION BKI_ROWTYPE_OID(8053,YbProfileRelation_Rowtype_Id) BKI_SCHEMA_MACRO
 {
 	NameData	prfname;		/* profile name */
-	int16		prffailedloginattempts;		/* no. of attempts allowed */
-	int64		prfpasswordlocktime;  /* secs to lock out an account */
+	int32		prffailedloginattempts;		/* no. of attempts allowed */
+	int32		prfpasswordlocktime;  /* secs to lock out an account */
 } FormData_pg_yb_profile;
 
 /* ----------------
@@ -39,4 +39,4 @@ CATALOG(pg_yb_profile,8051,YbProfileRelationId) BKI_SHARED_RELATION BKI_ROWTYPE_
  */
 typedef FormData_pg_yb_profile *Form_pg_yb_profile;
 
-#endif							/* PG_YB_LOGIN_PROFILE_H */
+#endif							/* PG_YB_PROFILE_H */

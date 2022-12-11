@@ -22,7 +22,7 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
  t            |                      0 | ind_user | ind_profile
 (1 row)
 
--- A failed attempt increments the counter
+-- Simulate a failed attempt that increments the counter.
 ALTER USER ind_user PROFILE ATTEMPTS FAILED;
 SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
@@ -32,7 +32,7 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
  t            |                      1 | ind_user | ind_profile
 (1 row)
 
- -- One more is allowed
+ -- Simulate one more failure. This failure is allowed and does not disable the role.
 ALTER USER ind_user PROFILE ATTEMPTS FAILED;
 SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
@@ -42,7 +42,7 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
  t            |                      2 | ind_user | ind_profile
 (1 row)
 
- -- Increment and disable
+ -- Simulate one more failure. This attempt disables the role.
 ALTER USER ind_user PROFILE ATTEMPTS FAILED;
 SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
@@ -52,7 +52,7 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
  f            |                      3 | ind_user | ind_profile
 (1 row)
 
---Enable should reset the counter
+-- Enable should reset the counter
 ALTER USER ind_user PROFILE ENABLE;
 SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid

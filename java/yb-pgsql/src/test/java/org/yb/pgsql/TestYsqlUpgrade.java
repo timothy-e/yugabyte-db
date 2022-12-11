@@ -1079,7 +1079,7 @@ public class TestYsqlUpgrade extends BasePgSQLTest {
       // Get record version.  Record line comes right after comment line:
       //         | # For better version control conflict detection, list latest migration filename
       // comment | # here: V19__6560__pg_collation_icu_70.sql
-      // record | { major => '19', minor => '0', name => '<baseline>', time_applied => '_null_' }
+      // record  | { major => '19', minor => '0', name => '<baseline>', time_applied => '_null_' }
       assertTrue("Expected line after filename comment line", it.hasNext());
       String recordLine = it.nextLine();
       Matcher matcher = recordRe.matcher(recordLine);

@@ -1054,7 +1054,7 @@ bool YBCExecuteUpdate(Relation rel,
 	return rows_affected_count > 0;
 }
 
-extern bool
+bool
 YBCExecuteUpdateLoginAttempts(Oid roleid,
 							  int failed_attempts,
 							  bool is_enabled)
@@ -1099,17 +1099,11 @@ YBCExecuteUpdateLoginAttempts(Oid roleid,
 		Datum 					d;
 
 		if (attnum == Anum_pg_yb_role_profile_rolfailedloginattempts)
-		{
 			d = Int16GetDatum(failed_attempts);
-		}
 		else if (attnum == Anum_pg_yb_role_profile_rolisenabled)
-		{
 			d = BoolGetDatum(is_enabled);
-		}
 		else
-		{
 			continue;
-		}
 
 		YBCPgExpr ybc_expr = YBCNewConstant(update_stmt, type_id, InvalidOid, d, false);
 
