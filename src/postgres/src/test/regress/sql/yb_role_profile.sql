@@ -15,7 +15,7 @@ SELECT oid, typname, typrelid FROM pg_type WHERE typname LIKE 'pg_yb_role_profil
 CREATE PROFILE test_profile FAILED ATTEMPTS 3;
 CREATE USER restricted_user;
 
--- Can connect when no profiles ae setup
+-- Can connect when no profiles are setup
 \c yugabyte restricted_user
 \c yugabyte yugabyte
 
@@ -48,7 +48,7 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
 -- fail: Cannot attache a role that has already been attached
 ALTER USER restricted_user PROFILE ATTACH test_profile;
 
--- faile: Cannot drop a profile or role that has been attached
+-- fail: Cannot drop a profile or role that has been attached
 DROP PROFILE test_profile;
 DROP USER restricted_user;
 
@@ -58,11 +58,11 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
     JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
 
---fail: cannot enable/disable a role that is not attached
+-- fail: cannot enable/disable a role that is not attached
 ALTER USER restricted_user PROFILE ENABLE;
 ALTER USER restricted_user PROFILE DISABLE;
 
---fail: Cannot attach to a non-existent profile
+-- fail: Cannot attach to a non-existent profile
 ALTER USER restricted_user PROFILE ATTACH non_existent;
 DROP USER restricted_user;
 DROP PROFILE test_profile;

@@ -6,13 +6,13 @@
 --
 \d pg_yb_role_profile
                Table "pg_catalog.pg_yb_role_profile"
-         Column         |   Type   | Collation | Nullable | Default
-------------------------+----------+-----------+----------+---------
- rolisenabled           | boolean  |           | not null |
- rolid                  | oid      |           | not null |
- prfid                  | oid      |           | not null |
- rolfailedloginattempts | smallint |           | not null |
- rollockedat            | bigint   |           | not null |
+         Column         |  Type   | Collation | Nullable | Default
+------------------------+---------+-----------+----------+---------
+ rolisenabled           | boolean |           | not null |
+ rolid                  | oid     |           | not null |
+ prfid                  | oid     |           | not null |
+ rolfailedloginattempts | integer |           | not null |
+ rollockedat            | bigint  |           | not null |
 Indexes:
     "pg_yb_role_profile_oid_index" PRIMARY KEY, lsm (rolid ASC), tablespace "pg_global"
 Tablespace: "pg_global"
@@ -35,7 +35,7 @@ SELECT oid, typname, typrelid FROM pg_type WHERE typname LIKE 'pg_yb_role_profil
 --
 CREATE PROFILE test_profile FAILED ATTEMPTS 3;
 CREATE USER restricted_user;
--- Can connect when no profiles ae setup
+-- Can connect when no profiles are setup
 \c yugabyte restricted_user
 \c yugabyte yugabyte
 SELECT prfname, prffailedloginattempts FROM pg_catalog.pg_yb_profile ORDER BY OID;
@@ -87,7 +87,7 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
 -- fail: Cannot attache a role that has already been attached
 ALTER USER restricted_user PROFILE ATTACH test_profile;
 ERROR:  role "restricted_user" is associated with a profile
--- faile: Cannot drop a profile or role that has been attached
+-- fail: Cannot drop a profile or role that has been attached
 DROP PROFILE test_profile;
 ERROR:  cannot drop profile test_profile because other objects depend on it
 DETAIL:  a profile is attached to role restricted_user depends on profile test_profile
@@ -104,12 +104,12 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
 --------------+------------------------+---------+---------
 (0 rows)
 
---fail: cannot enable/disable a role that is not attached
+-- fail: cannot enable/disable a role that is not attached
 ALTER USER restricted_user PROFILE ENABLE;
 ERROR:  role "restricted_user" is not associated with a profile
 ALTER USER restricted_user PROFILE DISABLE;
 ERROR:  role "restricted_user" is not associated with a profile
---fail: Cannot attach to a non-existent profile
+-- fail: Cannot attach to a non-existent profile
 ALTER USER restricted_user PROFILE ATTACH non_existent;
 ERROR:  profile "non_existent" does not exist
 DROP USER restricted_user;

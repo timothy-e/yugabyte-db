@@ -11,12 +11,12 @@ Try \h with no arguments to see available help.
 -- pg_catalog alterations. Validate columns of pg_yb_profile and oids.
 --
 \d pg_yb_profile
-                  Table "pg_catalog.pg_yb_profile"
-         Column         |   Type   | Collation | Nullable | Default
-------------------------+----------+-----------+----------+---------
- prfname                | name     |           | not null |
- prffailedloginattempts | smallint |           | not null |
- prfpasswordlocktime    | bigint   |           | not null |
+                 Table "pg_catalog.pg_yb_profile"
+         Column         |  Type   | Collation | Nullable | Default
+------------------------+---------+-----------+----------+---------
+ prfname                | name    |           | not null |
+ prffailedloginattempts | integer |           | not null |
+ prfpasswordlocktime    | integer |           | not null |
 Indexes:
     "pg_yb_profile_oid_index" PRIMARY KEY, lsm (oid ASC), tablespace "pg_global"
 Tablespace: "pg_global"
@@ -57,7 +57,7 @@ SELECT prfname, prffailedloginattempts FROM pg_catalog.pg_yb_profile ORDER BY OI
  test_profile |                      3
 (2 rows)
 
---Fail because it is a duplicate name
+-- Fail because it is a duplicate name
 CREATE PROFILE test_profile FAILED ATTEMPTS 4;
 ERROR:  profile "test_profile" already exists
 --
