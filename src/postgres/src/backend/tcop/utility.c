@@ -2474,7 +2474,7 @@ CreateCommandTag(Node *parsetree)
 				case OBJECT_YBTABLEGROUP:
 					tag = "DROP TABLEGROUP";
 					break;
-				case OBJECT_PROFILE:
+				case OBJECT_YBPROFILE:
 					tag = "DROP PROFILE";
 					break;
 				default:

@@ -6873,7 +6873,7 @@ drop_type_name:
 				{
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
-					$$ = OBJECT_PROFILE;
+					$$ = OBJECT_YBPROFILE;
 				}
 		;
 

@@ -515,7 +515,7 @@ static const ObjectPropertyType ObjectProperty[] =
 		InvalidAttrNumber,
 		InvalidAttrNumber,
 		InvalidAttrNumber,
-		OBJECT_PROFILE,
+		OBJECT_YBPROFILE,
 		true
 	}
 };
@@ -747,9 +747,9 @@ static const struct object_type_map
 	{
 		"statistics object", OBJECT_STATISTIC_EXT
 	},
-	/* OBJECT_PROFILE */
+	/* OBJECT_YBPROFILE */
 	{
-		"profile", OBJECT_PROFILE
+		"profile", OBJECT_YBPROFILE
 	}
 };
 
@@ -915,7 +915,7 @@ get_object_address(ObjectType objtype, Node *object,
 			case OBJECT_PUBLICATION:
 			case OBJECT_SUBSCRIPTION:
 			case OBJECT_YBTABLEGROUP:
-			case OBJECT_PROFILE:
+			case OBJECT_YBPROFILE:
 				address = get_object_address_unqualified(objtype,
 														 (Value *) object, missing_ok);
 				break;
@@ -1225,7 +1225,7 @@ get_object_address_unqualified(ObjectType objtype,
 			address.objectId = get_subscription_oid(name, missing_ok);
 			address.objectSubId = 0;
 			break;
-		case OBJECT_PROFILE:
+		case OBJECT_YBPROFILE:
 			address.classId = YbProfileRelationId;
 			address.objectId = get_profile_oid(name, missing_ok);
 			address.objectSubId = 0;
@@ -2183,7 +2183,7 @@ pg_get_object_address(PG_FUNCTION_ARGS)
 		case OBJECT_TABCONSTRAINT:
 		case OBJECT_OPCLASS:
 		case OBJECT_OPFAMILY:
-		case OBJECT_PROFILE:
+		case OBJECT_YBPROFILE:
 			objnode = (Node *) name;
 			break;
 		case OBJECT_ACCESS_METHOD:
@@ -2479,7 +2479,7 @@ check_object_ownership(Oid roleid, ObjectType objtype, ObjectAddress address,
 			if (!pg_statistics_object_ownercheck(address.objectId, roleid))
 				aclcheck_error_type(ACLCHECK_NOT_OWNER, address.objectId);
 			break;
-		case OBJECT_PROFILE:
+		case OBJECT_YBPROFILE:
 			/* A profile can be dropped by the super user or yb_db_admin */
 			if (!superuser() && !IsYbDbAdminUser(GetUserId()))
 				ereport(ERROR,
@@ -3658,14 +3658,14 @@ getObjectDescription(const ObjectAddress *object)
 				ReleaseSysCache(trfTup);
 				break;
 			}
-		case OCLASS_PROFILE:
+		case OCLASS_YBPROFILE:
 			{
 				char	   *profile;
 				profile = get_profile_name(object->objectId);
 				appendStringInfo(&buffer, _("profile %s"), profile);
 				break;
 			}
-		case OCLASS_ROLE_PROFILE:
+		case OCLASS_ROLE_YBPROFILE:
 			{
 				Oid roleid = get_role_oid_from_role_profile(object->objectId);
 				appendStringInfo(&buffer, _("a profile is attached to role %s"),
@@ -4179,11 +4179,11 @@ getObjectTypeDescription(const ObjectAddress *object)
 			appendStringInfoString(&buffer, "transform");
 			break;
 
-		case OCLASS_PROFILE:
+		case OCLASS_YBPROFILE:
 			appendStringInfoString(&buffer, "profile");
 			break;
 
-		case OCLASS_ROLE_PROFILE:
+		case OCLASS_ROLE_YBPROFILE:
 			appendStringInfoString(&buffer, "role profile");
 			break;
 			/*
@@ -5254,7 +5254,7 @@ getObjectIdentityParts(const ObjectAddress *object,
 				heap_close(transformDesc, AccessShareLock);
 			}
 			break;
-		case OCLASS_PROFILE:
+		case OCLASS_YBPROFILE:
 			{
 				char	   *profile;
 				profile = get_profile_name(object->objectId);
@@ -5264,7 +5264,7 @@ getObjectIdentityParts(const ObjectAddress *object,
 									   quote_identifier(profile));
 				break;
 			}
-		case OCLASS_ROLE_PROFILE:
+		case OCLASS_ROLE_YBPROFILE:
 			{
 				Oid roleid = get_role_oid_from_role_profile(object->objectId);
 				if (roleid == InvalidOid)

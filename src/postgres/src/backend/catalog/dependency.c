@@ -179,8 +179,8 @@ static const Oid object_classes[] = {
 	PublicationRelRelationId,	/* OCLASS_PUBLICATION_REL */
 	SubscriptionRelationId,		/* OCLASS_SUBSCRIPTION */
 	TransformRelationId,		/* OCLASS_TRANSFORM */
-	YbProfileRelationId,		/* OCLASS_PROFILE */
-	YbRoleProfileRelationId,	/* OCLASS_ROLE_PROFILE */
+	YbProfileRelationId,		/* OCLASS_YBPROFILE */
+	YbRoleProfileRelationId,	/* OCLASS_ROLE_YBPROFILE */
 };
 
 
@@ -1319,11 +1319,11 @@ doDeletion(const ObjectAddress *object, int flags)
 			RemoveTablegroupById(object->objectId);
 			break;
 
-		case OCLASS_PROFILE:
+		case OCLASS_YBPROFILE:
 			RemoveProfileById(object->objectId);
 			break;
 
-		case OCLASS_ROLE_PROFILE:
+		case OCLASS_ROLE_YBPROFILE:
 			RemoveRoleProfileById(object->objectId);
 			break;
 			/*
@@ -2549,10 +2549,10 @@ getObjectClass(const ObjectAddress *object)
 			return OCLASS_DATABASE;
 
 		case YbProfileRelationId:
-			return OCLASS_PROFILE;
+			return OCLASS_YBPROFILE;
 
 		case YbRoleProfileRelationId:
-			return OCLASS_ROLE_PROFILE;
+			return OCLASS_ROLE_YBPROFILE;
 
 		case YbTablegroupRelationId:
 			return OCLASS_TBLGROUP;
