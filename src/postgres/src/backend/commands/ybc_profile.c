@@ -1,40 +1,25 @@
-// profile.c
-//	  Commands to manipulate profiles.
-//	  Profiles are used to control login behaviour such as failed attempts.
-//
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-//
-// The following only applies to changes made to this file as part of YugaByte
-// development.
-//
-// Portions Copyright (c) YugaByte, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not
-// use this file except in compliance with the License.  You may obtain a copy
-// of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
-// License for the specific language governing permissions and limitations under
-// the License.
+/*--------------------------------------------------------------------------------------------------
+ *
+ * ybc_profile.c
+ *        Commands to implement PROFILE functionality.
+ *
+ * Copyright (c) YugaByte, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.  You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied.  See the License for the specific language governing permissions and limitations
+ * under the License.
+ *
+ * IDENTIFICATION
+ *        src/backend/commands/ybc_profile.c
+ *
+ *------------------------------------------------------------------------------
+ */
 
 #include "postgres.h"
 
@@ -109,7 +94,7 @@ CreateProfile(CreateProfileStmt *stmt)
 	Datum	  values[Natts_pg_yb_profile];
 	bool	  nulls[Natts_pg_yb_profile];
 	HeapTuple tuple;
-	Oid		  prfoid;
+	Oid		  prfid;
 
 	CheckProfileCatalogsExist();
 
@@ -146,14 +131,14 @@ CreateProfile(CreateProfileStmt *stmt)
 
 	tuple = heap_form_tuple(rel->rd_att, values, nulls);
 
-	prfoid = CatalogTupleInsert(rel, tuple);
+	prfid = CatalogTupleInsert(rel, tuple);
 
 	heap_freetuple(tuple);
 
 	/* We keep the lock on pg_yb_profile until commit */
 	heap_close(rel, NoLock);
 
-	return prfoid;
+	return prfid;
 }
 
 /*
@@ -193,7 +178,8 @@ get_profile_oid(const char *prfname, bool missing_ok)
 	heap_close(rel, AccessShareLock);
 
 	if (!OidIsValid(result) && !missing_ok)
-		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
+		ereport(ERROR, 
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
 						errmsg("profile \"%s\" does not exist", prfname)));
 
 	return result;
@@ -206,7 +192,7 @@ get_profile_oid(const char *prfname, bool missing_ok)
  * caller to verify that this function can do the right thing.
  */
 HeapTuple
-get_profile_tuple(Oid prfoid)
+get_profile_tuple(Oid prfid)
 {
 	Relation	 rel;
 	HeapScanDesc scandesc;
@@ -221,7 +207,7 @@ get_profile_tuple(Oid prfoid)
 	rel = heap_open(YbProfileRelationId, AccessShareLock);
 
 	ScanKeyInit(&entry[0], ObjectIdAttributeNumber,
-				BTEqualStrategyNumber, F_OIDEQ, prfoid);
+				BTEqualStrategyNumber, F_OIDEQ, prfid);
 	scandesc = heap_beginscan_catalog(rel, 1, entry);
 	tuple = heap_getnext(scandesc, ForwardScanDirection);
 
@@ -241,15 +227,15 @@ get_profile_tuple(Oid prfoid)
  * Returns a palloc'd string, or NULL if no such profile.
  */
 char *
-get_profile_name(Oid prfoid)
+get_profile_name(Oid prfid)
 {
 	HeapTuple tuple;
 
-	tuple = get_profile_tuple(prfoid);
+	tuple = get_profile_tuple(prfid);
 
 	/* We assume that there can be at most one matching tuple */
 	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "could not find tuple for profile %u", prfoid);
+		elog(ERROR, "could not find tuple for profile %u", prfid);
 
 	return pstrdup(NameStr(((Form_pg_yb_profile) GETSTRUCT(tuple))->prfname));
 }
@@ -262,7 +248,7 @@ get_profile_name(Oid prfoid)
  * grp_oid - the oid of the profile.
  */
 void
-RemoveProfileById(Oid prf_oid)
+RemoveProfileById(Oid prfid)
 {
 	Relation	 pg_profile_rel;
 	HeapScanDesc scandesc;
@@ -271,11 +257,10 @@ RemoveProfileById(Oid prf_oid)
 
 	CheckProfileCatalogsExist();
 
-	if (prf_oid == DEFAULT_PROFILE_OID)
-	{
-		ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+	if (prfid == DEFAULT_PROFILE_OID)
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					errmsg("profile \"default\" cannot be dropped")));
-	}
 
 	pg_profile_rel = heap_open(YbProfileRelationId, RowExclusiveLock);
 
@@ -283,22 +268,23 @@ RemoveProfileById(Oid prf_oid)
 	 * Find the profile to delete.
 	 */
 	ScanKeyInit(&skey[0], ObjectIdAttributeNumber, BTEqualStrategyNumber,
-				F_OIDEQ, ObjectIdGetDatum(prf_oid));
+				F_OIDEQ, ObjectIdGetDatum(prfid));
 	scandesc = heap_beginscan_catalog(pg_profile_rel, 1, skey);
 	tuple = heap_getnext(scandesc, ForwardScanDirection);
 
 	/* If the profile exists, then remove it, otherwise raise an error. */
 	if (!HeapTupleIsValid(tuple))
 	{
-		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("profile "
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("profile "
 																  "with oid %u "
 																  "does not "
 																  "exist",
-																  prf_oid)));
+																  prfid)));
 	}
 
 	/* DROP hook for the profile being removed */
-	InvokeObjectDropHook(YbProfileRelationId, prf_oid, 0);
+	InvokeObjectDropHook(YbProfileRelationId, prfid, 0);
 
 	/*
 	 * Remove the pg_yb_profile tuple
@@ -319,13 +305,13 @@ RemoveProfileById(Oid prf_oid)
  * Create a role profile.
  */
 Oid
-CreateRoleProfile(Oid rolid, const char *rolname, const char *prfname)
+CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 {
 	Relation  rel;
 	Datum	  values[Natts_pg_yb_role_profile];
 	bool	  nulls[Natts_pg_yb_role_profile];
 	HeapTuple tuple;
-	Oid		  rolprfoid;
+	Oid		  roleprfid;
 
 	CheckProfileCatalogsExist();
 
@@ -334,28 +320,15 @@ CreateRoleProfile(Oid rolid, const char *rolname, const char *prfname)
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied to attach role \"%s\" to profile \"%s\"",
-						rolname, prfname),
+						rolename, prfname),
 				 errhint("Must be superuser or a member of the yb_db_admin "
 						 "role to create a profile.")));
-
-
-	/* If not superuser check privileges */
-	if (!superuser())
-	{
-		AclResult aclresult;
-		// Check that user has create privs on the database to allow creation
-		// of a new profile.
-		aclresult = pg_database_aclcheck(MyDatabaseId, GetUserId(), ACL_CREATE);
-		if (aclresult != ACLCHECK_OK)
-			aclcheck_error(aclresult, OBJECT_PROFILE,
-						   get_database_name(MyDatabaseId));
-	}
 
 	/*
 	 * Check that there is a profile by this name.
 	 */
-	Oid prfoid = get_profile_oid(prfname, true);
-	if (!OidIsValid(prfoid))
+	Oid prfid = get_profile_oid(prfname, true);
+	if (!OidIsValid(prfid))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("profile \"%s\" does not exist", prfname)));
@@ -363,11 +336,11 @@ CreateRoleProfile(Oid rolid, const char *rolname, const char *prfname)
 	/*
 	 * Check that there isn't another entry for role profile
 	 */
-	if (OidIsValid(get_role_profile_oid(rolid, rolname, true)))
+	if (OidIsValid(get_role_profile_oid(roleid, rolename, true)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
 				 errmsg("role \"%s\" is associated with a profile",
-					 rolname)));
+					 rolename)));
 
 
 	/*
@@ -377,28 +350,28 @@ CreateRoleProfile(Oid rolid, const char *rolname, const char *prfname)
 
 	MemSet(nulls, false, sizeof(nulls));
 
-	values[Anum_pg_yb_role_profile_rolid - 1] = rolid;
-	values[Anum_pg_yb_role_profile_prfid - 1] = prfoid;
+	values[Anum_pg_yb_role_profile_rolid - 1] = roleid;
+	values[Anum_pg_yb_role_profile_prfid - 1] = prfid;
 	values[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = 0;
 	values[Anum_pg_yb_role_profile_rollockedat - 1] = 0;
 	values[Anum_pg_yb_role_profile_rolisenabled - 1] = true;
 
 	tuple = heap_form_tuple(rel->rd_att, values, nulls);
 
-	rolprfoid = CatalogTupleInsert(rel, tuple);
+	roleprfid = CatalogTupleInsert(rel, tuple);
 
 	// Record dependencies on profile and role
 	ObjectAddress myself, profile;
 
 	myself.classId = YbRoleProfileRelationId;
-	myself.objectId = rolprfoid;
+	myself.objectId = roleprfid;
 	myself.objectSubId = 0;
 
 	profile.classId = YbProfileRelationId;
-	profile.objectId = prfoid;
+	profile.objectId = prfid;
 	profile.objectSubId = 0;
 
-	recordDependencyOnOwner(YbRoleProfileRelationId, rolprfoid, rolid);
+	recordDependencyOnOwner(YbRoleProfileRelationId, roleprfid, roleid);
 	recordDependencyOn(&myself, &profile, DEPENDENCY_NORMAL);
 
 	heap_freetuple(tuple);
@@ -406,11 +379,11 @@ CreateRoleProfile(Oid rolid, const char *rolname, const char *prfname)
 	/* We keep the lock on pg_yb_login_profile until commit */
 	heap_close(rel, NoLock);
 
-	return rolprfoid;
+	return roleprfid;
 }
 
 Oid
-get_role_oid_from_role_profile(Oid rolprfoid)
+get_role_oid_from_role_profile(Oid roleprfid)
 {
 	Relation	 rel;
 	HeapScanDesc scandesc;
@@ -427,16 +400,16 @@ get_role_oid_from_role_profile(Oid rolprfoid)
 
 
 	ScanKeyInit(&skey[0], ObjectIdAttributeNumber, BTEqualStrategyNumber,
-				F_OIDEQ, ObjectIdGetDatum(rolprfoid));
+				F_OIDEQ, ObjectIdGetDatum(roleprfid));
 	scandesc = heap_beginscan_catalog(rel, 1, skey);
 	tuple = heap_getnext(scandesc, ForwardScanDirection);
 
 	if (HeapTupleIsValid(tuple))
 	{
-		Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile)
+		Form_pg_yb_role_profile roleprfform = (Form_pg_yb_role_profile)
 			GETSTRUCT(tuple);
 
-		roleid = DatumGetObjectId(rolprfform->rolid);
+		roleid = DatumGetObjectId(roleprfform->rolid);
 	}
 	else
 		roleid = InvalidOid;
@@ -446,7 +419,7 @@ get_role_oid_from_role_profile(Oid rolprfoid)
 
 	// Throw an error after ending the heap scan.
 	if (roleid == InvalidOid)
-		elog(ERROR, "could not find tuple for role profile %u", rolprfoid);
+		elog(ERROR, "could not find tuple for role profile %u", roleprfid);
 
 	return roleid;
 }
@@ -458,7 +431,7 @@ get_role_oid_from_role_profile(Oid rolprfoid)
  * caller to verify that this function can do the right thing.
  */
 HeapTuple
-get_role_profile_tuple(Oid rolid)
+get_role_profile_tuple(Oid roleid)
 {
 	Relation	 rel;
 	HeapScanDesc scandesc;
@@ -473,7 +446,7 @@ get_role_profile_tuple(Oid rolid)
 	rel = heap_open(YbRoleProfileRelationId, AccessShareLock);
 
 	ScanKeyInit(&entry[0], Anum_pg_yb_role_profile_rolid,
-				BTEqualStrategyNumber, F_OIDEQ, rolid);
+				BTEqualStrategyNumber, F_OIDEQ, roleid);
 	scandesc = heap_beginscan_catalog(rel, 1, entry);
 	tuple = heap_getnext(scandesc, ForwardScanDirection);
 
@@ -496,12 +469,12 @@ get_role_profile_tuple(Oid rolid)
  * If true, just return InvalidOid.
  */
 Oid
-get_role_profile_oid(Oid rolid, const char *rolname, bool missing_ok)
+get_role_profile_oid(Oid roleid, const char *rolename, bool missing_ok)
 {
 	Oid			 result;
 	HeapTuple	 tuple;
 
-	tuple = get_role_profile_tuple(rolid);
+	tuple = get_role_profile_tuple(roleid);
 
 	/* We assume that there can be at most one matching tuple */
 	if (HeapTupleIsValid(tuple))
@@ -510,17 +483,18 @@ get_role_profile_oid(Oid rolid, const char *rolname, bool missing_ok)
 		result = InvalidOid;
 
 	if (!OidIsValid(result) && !missing_ok)
-		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
 						errmsg("role \"%s\" is not associated with a profile",
-							rolname)));
+							rolename)));
 
 	return result;
 }
 
 Oid
 update_role_profile(Oid roleid, const char *rolename, Datum *new_record,
-		bool *new_record_nulls, bool *new_record_repl,
-		bool missing_ok)
+					bool *new_record_nulls, bool *new_record_repl,
+					bool missing_ok)
 {
 	Relation	pg_yb_role_profile_rel;
 	TupleDesc	pg_yb_role_profile_dsc;
@@ -547,7 +521,8 @@ update_role_profile(Oid roleid, const char *rolename, Datum *new_record,
 		heap_freetuple(new_tuple);
 	}
 	else if (!missing_ok)
-		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
 						errmsg("role \"%s\" is not associated with a profile",
 							rolename)));
 	else
@@ -649,7 +624,8 @@ IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char *rolename)
 
 	HeapTuple prftuple = get_profile_tuple(DatumGetObjectId(rolprfform->prfid));
 	if (!HeapTupleIsValid(prftuple))
-		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
 						errmsg("profile \"%d\" not found!",
 							roleid)));
 
@@ -703,7 +679,8 @@ YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
 
 	prftuple = get_profile_tuple(DatumGetObjectId(rolprfform->prfid));
 	if (!HeapTupleIsValid(prftuple))
-		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT),
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
 						errmsg("Profile \"%d\" not found!",
 							roleid)));
 
@@ -720,11 +697,6 @@ YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
 	CommitTransactionCommand();
 }
 
-/*
- * RemoveRoleProfileById - detach a role from profile.
- *
- * rolprfoid - the oid of the role_profile entry.
- */
 void
 RemoveRoleProfileForRole(Oid roleid, const char *rolename)
 {
@@ -740,6 +712,11 @@ RemoveRoleProfileForRole(Oid roleid, const char *rolename)
 	performDeletion(&myself, DROP_RESTRICT, 0);
 }
 
+/*
+ * RemoveRoleProfileById - detach a role from profile.
+ *
+ * roleprfid - the oid of the role_profile entry.
+ */
 void RemoveRoleProfileById(Oid roleprfoid)
 {
 	Relation	 rel;
@@ -761,7 +738,8 @@ void RemoveRoleProfileById(Oid roleprfoid)
 
 	/* If the profile exists, then remove it, otherwise raise an error. */
 	if (!HeapTupleIsValid(tuple))
-		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("role profile"
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("role profile"
 						"%d does exist", roleprfoid)));
 
 	/*

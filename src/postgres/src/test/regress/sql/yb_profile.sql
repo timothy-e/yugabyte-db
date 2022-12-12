@@ -34,5 +34,14 @@ DROP PROFILE test_profile;
 -- fail: does not exist
 DROP PROFILE test_profile;
 
+--
+-- Test IF EXISTS clause
+--
+
+DROP PROFILE IF EXISTS non_existing;
+
+CREATE PROFILE exists_profile FAILED ATTEMPTS 3;
+DROP PROFILE IF EXISTS exists_profile;
+
 -- fail: cannot delete default profile
 DROP PROFILE "default";

@@ -2469,7 +2469,6 @@ check_object_ownership(Oid roleid, ObjectType objtype, ObjectAddress address,
 		case OBJECT_TSPARSER:
 		case OBJECT_TSTEMPLATE:
 		case OBJECT_ACCESS_METHOD:
-		case OBJECT_PROFILE:
 			/* We treat these object types as being owned by superusers */
 			if (!superuser_arg(roleid))
 				ereport(ERROR,
@@ -2480,6 +2479,16 @@ check_object_ownership(Oid roleid, ObjectType objtype, ObjectAddress address,
 			if (!pg_statistics_object_ownercheck(address.objectId, roleid))
 				aclcheck_error_type(ACLCHECK_NOT_OWNER, address.objectId);
 			break;
+		case OBJECT_PROFILE:
+			/* A profile can be dropped by the super user or yb_db_admin */
+			if (!superuser() && !IsYbDbAdminUser(GetUserId()))
+				ereport(ERROR,
+						(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+						 errmsg("permission denied to drop profile"),
+						 errhint("Must be superuser or "
+								 "a member of the yb_db_admin")));
+			break;
+
 		default:
 			elog(ERROR, "unrecognized object type: %d",
 				 (int) objtype);
