@@ -30,7 +30,7 @@
 #include "catalog/pg_yb_role_profile.h"
 #include "catalog/pg_yb_role_profile_d.h"
 #include "catalog/yb_type.h"
-#include "commands/profile.h"
+#include "commands/ybc_profile.h"
 #include "utils/relcache.h"
 #include "utils/rel.h"
 #include "utils/lsyscache.h"

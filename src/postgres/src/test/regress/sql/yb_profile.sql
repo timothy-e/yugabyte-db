@@ -17,13 +17,13 @@ SELECT pg_describe_object('pg_yb_profile'::regclass::oid, oid, 0) FROM pg_yb_pro
 --
 SELECT oid, prfname, prffailedloginattempts FROM pg_catalog.pg_yb_profile ORDER BY oid;
 
-CREATE PROFILE test_profile FAILED ATTEMPTS 3;
+CREATE PROFILE test_profile LIMIT FAILED_LOGIN_ATTEMPTS 3;
 
 SELECT prfname, prffailedloginattempts FROM pg_catalog.pg_yb_profile ORDER BY OID;
 
 -- Fail because it is a duplicate name
 
-CREATE PROFILE test_profile FAILED ATTEMPTS 4;
+CREATE PROFILE test_profile LIMIT FAILED_LOGIN_ATTEMPTS 4;
 
 --
 -- DROP PROFILE
@@ -40,7 +40,7 @@ DROP PROFILE test_profile;
 
 DROP PROFILE IF EXISTS non_existing;
 
-CREATE PROFILE exists_profile FAILED ATTEMPTS 3;
+CREATE PROFILE exists_profile LIMIT FAILED_LOGIN_ATTEMPTS 3;
 DROP PROFILE IF EXISTS exists_profile;
 
 -- fail: cannot delete default profile

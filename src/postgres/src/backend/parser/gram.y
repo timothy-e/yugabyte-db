@@ -660,7 +660,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 /* ordinary key words in alphabetical order */
 %token <keyword> ABORT_P ABSOLUTE_P ACCESS ACTION ADD_P ADMIN AFTER
 	AGGREGATE ALL ALSO ALTER ALWAYS ANALYSE ANALYZE AND ANY ARRAY AS ASC
-	ASSERTION ASSIGNMENT ASYMMETRIC AT ATTACH ATTEMPTS ATTRIBUTE AUTHORIZATION
+	ASSERTION ASSIGNMENT ASYMMETRIC AT ATTACH ATTRIBUTE AUTHORIZATION
 
 	BACKFILL BACKWARD BEFORE BEGIN_P BETWEEN BIGINT BINARY BIT
 	BOOLEAN_P BOTH BY
@@ -683,8 +683,8 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 	EXCLUDE EXCLUDING EXCLUSIVE EXECUTE EXISTS EXPLAIN
 	EXTENSION EXTERNAL EXTRACT
 
-	FAILED FALSE_P FAMILY FETCH FILTER FIRST_P FLOAT_P FOLLOWING FOR
-	FORCE FOREIGN FORWARD FREEZE FROM FULL FUNCTION FUNCTIONS
+	FAILED_LOGIN_ATTEMPTS FALSE_P FAMILY FETCH FILTER FIRST_P FLOAT_P FOLLOWING
+	FOR FORCE FOREIGN FORWARD FREEZE FROM FULL FUNCTION FUNCTIONS
 
 	GENERATED GLOBAL GRANT GRANTED GREATEST GROUP_P GROUPING GROUPS
 
@@ -1150,7 +1150,7 @@ AlterOptRoleElem:
 					$$ = makeDefElem("enabled", (Node *)makeInteger(false), @1);
 				}
 				/* CAUTION: DEV RULE to test increment failed attempts counter and disable profile */
-			| PROFILE ATTEMPTS FAILED
+			| PROFILE ADD_P FAILED_LOGIN_ATTEMPTS
 				{
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
@@ -4856,11 +4856,11 @@ DropTableSpaceStmt: DROP TABLESPACE name
 /*****************************************************************************
  *
  *		QUERY:
- *             CREATE PROFILE prfname FAILED ATTEMPTS <number>
+ *             CREATE PROFILE prfname LIMIT FAILED_LOGIN_ATTEMPTS <number>
  *
  *****************************************************************************/
 
-CreateProfileStmt: CREATE PROFILE name FAILED ATTEMPTS SignedIconst
+CreateProfileStmt: CREATE PROFILE name LIMIT FAILED_LOGIN_ATTEMPTS Iconst
 				{
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
@@ -16026,7 +16026,6 @@ unreserved_keyword:
 			| ASSIGNMENT
 			| AT
 			| ATTACH
-			| ATTEMPTS
 			| ATTRIBUTE
 			| BACKFILL
 			| BACKWARD
@@ -16100,7 +16099,7 @@ unreserved_keyword:
 			| EXPLAIN
 			| EXTENSION
 			| EXTERNAL
-			| FAILED
+			| FAILED_LOGIN_ATTEMPTS
 			| FAMILY
 			| FILTER
 			| FIRST_P

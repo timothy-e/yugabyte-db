@@ -1,4 +1,4 @@
-CREATE PROFILE ind_profile FAILED ATTEMPTS 2;
+CREATE PROFILE ind_profile LIMIT FAILED_LOGIN_ATTEMPTS 2;
 CREATE USER ind_user;
 
 SELECT prfname, prffailedloginattempts FROM pg_catalog.pg_yb_profile ORDER BY OID;
@@ -11,19 +11,19 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
 
 -- Simulate a failed attempt that increments the counter.
-ALTER USER ind_user PROFILE ATTEMPTS FAILED;
+ALTER USER ind_user PROFILE ADD FAILED_LOGIN_ATTEMPTS;
 SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
     JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
 
  -- Simulate one more failure. This failure is allowed and does not disable the role.
-ALTER USER ind_user PROFILE ATTEMPTS FAILED;
+ALTER USER ind_user PROFILE ADD FAILED_LOGIN_ATTEMPTS;
 SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
     JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
 
  -- Simulate one more failure. This attempt disables the role.
-ALTER USER ind_user PROFILE ATTEMPTS FAILED;
+ALTER USER ind_user PROFILE ADD FAILED_LOGIN_ATTEMPTS;
 SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
     JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;

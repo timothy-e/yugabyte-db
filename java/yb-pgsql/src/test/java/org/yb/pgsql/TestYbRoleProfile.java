@@ -146,9 +146,9 @@ public class TestYbRoleProfile extends BasePgSQLTest {
   public void setup() throws Exception {
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(String.format("CREATE USER %s PASSWORD '%s'", USERNAME, PASSWORD));
-      stmt.execute(String.format("CREATE PROFILE %s FAILED ATTEMPTS %d",
+      stmt.execute(String.format("CREATE PROFILE %s LIMIT FAILED_LOGIN_ATTEMPTS %d",
                                   PROFILE_1_NAME, PRF_1_FAILED_ATTEMPTS));
-      stmt.execute(String.format("CREATE PROFILE %s FAILED ATTEMPTS %d",
+      stmt.execute(String.format("CREATE PROFILE %s LIMIT FAILED_LOGIN_ATTEMPTS %d",
                                   PROFILE_2_NAME, PRF_2_FAILED_ATTEMPTS));
       stmt.execute(String.format("ALTER USER %s PROFILE ATTACH %s",
                                   USERNAME, PROFILE_1_NAME));
