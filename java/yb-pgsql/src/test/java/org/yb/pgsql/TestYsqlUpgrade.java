@@ -1102,22 +1102,6 @@ public class TestYsqlUpgrade extends BasePgSQLTest {
     }
   }
 
-  @Test
-  public void testYbRoleProfile() throws Exception {
-    /*
-    * There are two operations that might result in an error if the profile catalogs don't exist:
-    *  1. logging in, because auth.c tries to get the user's profile if it exists
-    *  2. running profile commands.
-    * We can simply test this by logging in (which should behave as normal) and running a command.
-    */
-    recreateWithYsqlVersion(YsqlSnapshotVersion.EARLIEST);
-    try (Connection conn = getConnectionBuilder().withDatabase("template1").connect();
-         Statement stmt = conn.createStatement()) {
-          runInvalidQuery(stmt, "CREATE PROFILE p LIMIT FAILED_LOGIN_ATTEMPTS 3",
-                          "Login profile system catalogs do not exist");
-    }
-  }
-
   /** Invalid stuff which doesn't belong to other test cases. */
   @Test
   public void invalidUpgradeActions() throws Exception {

@@ -31,7 +31,7 @@ CATALOG(pg_yb_role_profile,8054,YbRoleProfileRelationId) BKI_SHARED_RELATION BKI
 	Oid			prfid;		/* OID of the profile */
 	bool		rolisenabled;	/* Is the Role enabled? */
 	int32		rolfailedloginattempts;  /* Number of failed attempts */
-	int64    	rollockedat;  /* Timestamp at which role was locked */
+	int32    	rollockedat;  /* Timestamp at which role was locked */
 } FormData_pg_yb_role_profile;
 
 /* ----------------
