@@ -45,7 +45,6 @@
 #include "commands/portalcmds.h"
 #include "commands/prepare.h"
 #include "commands/proclang.h"
-#include "commands/profile.h"
 #include "commands/publicationcmds.h"
 #include "commands/schemacmds.h"
 #include "commands/seclabel.h"
@@ -59,6 +58,7 @@
 #include "commands/user.h"
 #include "commands/vacuum.h"
 #include "commands/view.h"
+#include "commands/ybc_profile.h"
 #include "libpq/libpq-be.h"
 #include "miscadmin.h"
 #include "parser/parse_utilcmd.h"
@@ -2474,7 +2474,7 @@ CreateCommandTag(Node *parsetree)
 				case OBJECT_YBTABLEGROUP:
 					tag = "DROP TABLEGROUP";
 					break;
-				case OBJECT_PROFILE:
+				case OBJECT_YBPROFILE:
 					tag = "DROP PROFILE";
 					break;
 				default:

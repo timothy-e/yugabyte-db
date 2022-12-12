@@ -638,8 +638,8 @@ AlterObjectNamespace_oid(Oid classId, Oid objid, Oid nspOid,
 		case OCLASS_PUBLICATION_REL:
 		case OCLASS_SUBSCRIPTION:
 		case OCLASS_TRANSFORM:
-		case OCLASS_PROFILE:
-		case OCLASS_ROLE_PROFILE:
+		case OCLASS_YBPROFILE:
+		case OCLASS_ROLE_YBPROFILE:
 			/* ignore object types that don't have schema-qualified names */
 			break;
 

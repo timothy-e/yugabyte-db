@@ -49,7 +49,7 @@ SELECT oid, prfname, prffailedloginattempts FROM pg_catalog.pg_yb_profile ORDER 
  8057 | default |                      0
 (1 row)
 
-CREATE PROFILE test_profile FAILED ATTEMPTS 3;
+CREATE PROFILE test_profile LIMIT FAILED_LOGIN_ATTEMPTS 3;
 SELECT prfname, prffailedloginattempts FROM pg_catalog.pg_yb_profile ORDER BY OID;
    prfname    | prffailedloginattempts
 --------------+------------------------
@@ -58,7 +58,7 @@ SELECT prfname, prffailedloginattempts FROM pg_catalog.pg_yb_profile ORDER BY OI
 (2 rows)
 
 -- Fail because it is a duplicate name
-CREATE PROFILE test_profile FAILED ATTEMPTS 4;
+CREATE PROFILE test_profile LIMIT FAILED_LOGIN_ATTEMPTS 4;
 ERROR:  profile "test_profile" already exists
 --
 -- DROP PROFILE
@@ -72,7 +72,7 @@ ERROR:  profile "test_profile" does not exist
 --
 DROP PROFILE IF EXISTS non_existing;
 NOTICE:  profile "non_existing" does not exist, skipping
-CREATE PROFILE exists_profile FAILED ATTEMPTS 3;
+CREATE PROFILE exists_profile LIMIT FAILED_LOGIN_ATTEMPTS 3;
 DROP PROFILE IF EXISTS exists_profile;
 -- fail: cannot delete default profile
 DROP PROFILE "default";

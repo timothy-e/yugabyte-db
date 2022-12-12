@@ -1693,7 +1693,7 @@ typedef enum ObjectType
 	OBJECT_TYPE,
 	OBJECT_USER_MAPPING,
 	OBJECT_VIEW,
-	OBJECT_PROFILE
+	OBJECT_YBPROFILE
 } ObjectType;
 
 /* ----------------------

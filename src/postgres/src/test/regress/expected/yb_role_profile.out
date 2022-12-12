@@ -33,7 +33,7 @@ SELECT oid, typname, typrelid FROM pg_type WHERE typname LIKE 'pg_yb_role_profil
 --
 -- CREATE PROFILE
 --
-CREATE PROFILE test_profile FAILED ATTEMPTS 3;
+CREATE PROFILE test_profile LIMIT FAILED_LOGIN_ATTEMPTS 3;
 CREATE USER restricted_user;
 -- Can connect when no profiles are setup
 \c yugabyte restricted_user
