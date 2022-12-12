@@ -1,7 +1,7 @@
 BEGIN;
   CREATE TABLE IF NOT EXISTS pg_catalog.pg_yb_profile (
     prfname NAME NOT NULL,
-    prffailedloginattempts SMALLINT NOT NULL,
+    prffailedloginattempts INTEGER NOT NULL,
     prfpasswordlocktime INTEGER NOT NULL,
     CONSTRAINT pg_yb_profile_oid_index PRIMARY KEY(oid ASC)
         WITH (table_oid = 8052)
@@ -17,8 +17,8 @@ BEGIN;
     rolid OID NOT NULL,
     prfid OID NOT NULL,
     rolisenabled BOOL NOT NULL,
-    rolfailedloginattempts SMALLINT NOT NULL,
-    rollockts TIMESTAMPTZ NOT NULL,
+    rolfailedloginattempts INTEGER NOT NULL,
+    rollockedat TIMESTAMPTZ NOT NULL,
     CONSTRAINT pg_yb_role_profile_oid_index PRIMARY KEY(oid ASC)
         WITH (table_oid = 8055)
   ) WITH (
