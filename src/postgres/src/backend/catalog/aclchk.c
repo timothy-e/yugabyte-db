@@ -3804,7 +3804,7 @@ aclcheck_error(AclResult aclerr, ObjectType objtype,
 					case OBJECT_TABLESPACE:
 						msg = gettext_noop("permission denied for tablespace %s");
 						break;
-					case OBJECT_PROFILE:
+					case OBJECT_YBPROFILE:
 						msg = gettext_noop("permission denied for profile %s");
 						break;
 					case OBJECT_TSCONFIGURATION:
@@ -3971,7 +3971,7 @@ aclcheck_error(AclResult aclerr, ObjectType objtype,
 					case OBJECT_DEFACL:
 					case OBJECT_DOMCONSTRAINT:
 					case OBJECT_PUBLICATION_REL:
-					case OBJECT_PROFILE:
+					case OBJECT_YBPROFILE:
 					case OBJECT_ROLE:
 					case OBJECT_TRANSFORM:
 					case OBJECT_TSPARSER:

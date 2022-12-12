@@ -25,8 +25,8 @@
 
 #include "access/htup_details.h"
 #include "catalog/pg_yb_role_profile.h"
-#include "commands/profile.h"
 #include "commands/user.h"
+#include "commands/ybc_profile.h"
 #include "common/ip.h"
 #include "common/md5.h"
 #include "common/scram-common.h"

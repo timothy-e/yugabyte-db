@@ -658,9 +658,9 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
  */
 
 /* ordinary key words in alphabetical order */
-%token <keyword> ABORT_P ABSOLUTE_P ACCESS ACTION ADD_P ADMIN AFTER
+%token <keyword> ABORT_P ABSOLUTE_P ACCESS ACCOUNT ACTION ADD_P ADMIN AFTER
 	AGGREGATE ALL ALSO ALTER ALWAYS ANALYSE ANALYZE AND ANY ARRAY AS ASC
-	ASSERTION ASSIGNMENT ASYMMETRIC AT ATTACH ATTEMPTS ATTRIBUTE AUTHORIZATION
+	ASSERTION ASSIGNMENT ASYMMETRIC AT ATTACH ATTRIBUTE AUTHORIZATION
 
 	BACKFILL BACKWARD BEFORE BEGIN_P BETWEEN BIGINT BINARY BIT
 	BOOLEAN_P BOTH BY
@@ -683,8 +683,8 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 	EXCLUDE EXCLUDING EXCLUSIVE EXECUTE EXISTS EXPLAIN
 	EXTENSION EXTERNAL EXTRACT
 
-	FAILED FALSE_P FAMILY FETCH FILTER FIRST_P FLOAT_P FOLLOWING FOR
-	FORCE FOREIGN FORWARD FREEZE FROM FULL FUNCTION FUNCTIONS
+	FAILED_LOGIN_ATTEMPTS FALSE_P FAMILY FETCH FILTER FIRST_P FLOAT_P FOLLOWING
+	FOR FORCE FOREIGN FORWARD FREEZE FROM FULL FUNCTION FUNCTIONS
 
 	GENERATED GLOBAL GRANT GRANTED GREATEST GROUP_P GROUPING GROUPS
 
@@ -735,8 +735,8 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 	TREAT TRIGGER TRIM TRUE_P
 	TRUNCATE TRUSTED TYPE_P TYPES_P
 
-	UNBOUNDED UNCOMMITTED UNENCRYPTED UNION UNIQUE UNKNOWN UNLISTEN UNLOGGED
-	UNTIL UPDATE USER USING
+	UNBOUNDED UNCOMMITTED UNENCRYPTED UNION UNIQUE UNKNOWN UNLISTEN UNLOCK
+	UNLOGGED UNTIL UPDATE USER USING
 
 	VACUUM VALID VALIDATE VALIDATOR VALUE_P VALUES VARCHAR VARIADIC VARYING
 	VERBOSE VERSION_P VIEW VIEWS VOLATILE
@@ -1137,20 +1137,20 @@ AlterOptRoleElem:
 						parser_ybc_not_support(@1, "PROFILE");
 					$$ = makeDefElem("profile", (Node *)makeString($3), @1);
 				}
-			| PROFILE ENABLE_P
-				{
-					if (!*YBCGetGFlags()->ysql_enable_profile)
-						parser_ybc_not_support(@1, "PROFILE");
-					$$ = makeDefElem("enabled", (Node *)makeInteger(true), @1);
-				}
-			| PROFILE DISABLE_P
+			| ACCOUNT LOCK_P
 				{
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
 					$$ = makeDefElem("enabled", (Node *)makeInteger(false), @1);
 				}
+			| ACCOUNT UNLOCK
+				{
+					if (!*YBCGetGFlags()->ysql_enable_profile)
+						parser_ybc_not_support(@1, "PROFILE");
+					$$ = makeDefElem("enabled", (Node *)makeInteger(true), @1);
+				}
 				/* CAUTION: DEV RULE to test increment failed attempts counter and disable profile */
-			| PROFILE ATTEMPTS FAILED
+			| PROFILE ADD_P FAILED_LOGIN_ATTEMPTS
 				{
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
@@ -4856,11 +4856,11 @@ DropTableSpaceStmt: DROP TABLESPACE name
 /*****************************************************************************
  *
  *		QUERY:
- *             CREATE PROFILE prfname FAILED ATTEMPTS <number>
+ *             CREATE PROFILE prfname LIMIT FAILED_LOGIN_ATTEMPTS <number>
  *
  *****************************************************************************/
 
-CreateProfileStmt: CREATE PROFILE name FAILED ATTEMPTS SignedIconst
+CreateProfileStmt: CREATE PROFILE name LIMIT FAILED_LOGIN_ATTEMPTS Iconst
 				{
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
@@ -6873,7 +6873,7 @@ drop_type_name:
 				{
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
-					$$ = OBJECT_PROFILE;
+					$$ = OBJECT_YBPROFILE;
 				}
 		;
 
@@ -16014,6 +16014,7 @@ unreserved_keyword:
 			  ABORT_P
 			| ABSOLUTE_P
 			| ACCESS
+			| ACCOUNT
 			| ACTION
 			| ADD_P
 			| ADMIN
@@ -16026,7 +16027,6 @@ unreserved_keyword:
 			| ASSIGNMENT
 			| AT
 			| ATTACH
-			| ATTEMPTS
 			| ATTRIBUTE
 			| BACKFILL
 			| BACKWARD
@@ -16100,7 +16100,7 @@ unreserved_keyword:
 			| EXPLAIN
 			| EXTENSION
 			| EXTERNAL
-			| FAILED
+			| FAILED_LOGIN_ATTEMPTS
 			| FAMILY
 			| FILTER
 			| FIRST_P
@@ -16289,6 +16289,7 @@ unreserved_keyword:
 			| UNENCRYPTED
 			| UNKNOWN
 			| UNLISTEN
+			| UNLOCK
 			| UNLOGGED
 			| UNTIL
 			| UPDATE

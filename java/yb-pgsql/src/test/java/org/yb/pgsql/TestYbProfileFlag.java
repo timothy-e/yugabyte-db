@@ -65,7 +65,7 @@ public class TestYbProfileFlag extends BasePgSQLTest {
   @Test(expected = PSQLException.class)
   public void testCreateProfileIsDisabled() throws Exception {
     try (Statement stmt = connection.createStatement()) {
-      stmt.execute("CREATE PROFILE p1 FAILED ATTEMPTS 3");
+      stmt.execute("CREATE PROFILE p1 FAILED_LOGIN_ATTEMPTS 3");
     }
   }
 

@@ -44,10 +44,10 @@
 #include "commands/comment.h"
 #include "commands/dbcommands.h"
 #include "commands/defrem.h"
-#include "commands/profile.h"
 #include "commands/seclabel.h"
 #include "commands/tablecmds.h"
 #include "commands/ybccmds.h"
+#include "commands/ybc_profile.h"
 #include "common/file_perm.h"
 #include "miscadmin.h"
 #include "postmaster/bgwriter.h"
@@ -321,8 +321,7 @@ CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied to attach role \"%s\" to profile \"%s\"",
 						rolename, prfname),
-				 errhint("Must be superuser or a member of the yb_db_admin "
-						 "role to create a profile.")));
+				 errhint("Must be superuser or a member of the yb_db_admin")));
 
 	/*
 	 * Check that there is a profile by this name.

@@ -12,7 +12,7 @@ SELECT oid, typname, typrelid FROM pg_type WHERE typname LIKE 'pg_yb_role_profil
 --
 -- CREATE PROFILE
 --
-CREATE PROFILE test_profile FAILED ATTEMPTS 3;
+CREATE PROFILE test_profile LIMIT FAILED_LOGIN_ATTEMPTS 3;
 CREATE USER restricted_user;
 
 -- Can connect when no profiles are setup
@@ -31,12 +31,12 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
     JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
 
-ALTER USER restricted_user PROFILE DISABLE;
+ALTER USER restricted_user ACCOUNT LOCK;
 SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
     JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
 
-ALTER USER restricted_user PROFILE ENABLE;
+ALTER USER restricted_user ACCOUNT UNLOCK;
 SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
     JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
@@ -59,8 +59,8 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
 
 -- fail: cannot enable/disable a role that is not attached
-ALTER USER restricted_user PROFILE ENABLE;
-ALTER USER restricted_user PROFILE DISABLE;
+ALTER USER restricted_user ACCOUNT UNLOCK;
+ALTER USER restricted_user ACCOUNT LOCK;
 
 -- fail: Cannot attach to a non-existent profile
 ALTER USER restricted_user PROFILE ATTACH non_existent;
