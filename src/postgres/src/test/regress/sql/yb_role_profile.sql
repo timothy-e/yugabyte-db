@@ -45,7 +45,7 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
 \c yugabyte restricted_user
 \c yugabyte yugabyte
 
--- fail: Cannot attache a role that has already been attached
+-- fail: Cannot attach a role that has already been attached
 ALTER USER restricted_user PROFILE ATTACH test_profile;
 
 -- fail: Cannot drop a profile or role that has been attached
