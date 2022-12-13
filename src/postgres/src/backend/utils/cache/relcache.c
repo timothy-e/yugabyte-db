@@ -1941,7 +1941,7 @@ YBPreloadRelCache()
 	YbRegisterSysTableForPrefetching(NamespaceRelationId);             // pg_namespace
 	YbRegisterSysTableForPrefetching(AuthIdRelationId);                // pg_authid
 
-	if (YbLoginProfileCatalogsExist)
+	if (*YBCGetGFlags()->ysql_enable_profile && YbLoginProfileCatalogsExist)
 	{
 		YbRegisterSysTableForPrefetching(YbProfileRelationId);         // yb_pg_profile
 		YbRegisterSysTableForPrefetching(YbRoleProfileRelationId);     // yb_pg_role_profile
@@ -4518,7 +4518,7 @@ RelationCacheInitializePhase2(void)
 				  false, Natts_pg_shseclabel, Desc_pg_shseclabel);
 		formrdesc("pg_subscription", SubscriptionRelation_Rowtype_Id, true,
 				  true, Natts_pg_subscription, Desc_pg_subscription);
-		if (YbLoginProfileCatalogsExist)
+		if (*YBCGetGFlags()->ysql_enable_profile && YbLoginProfileCatalogsExist)
 		{
 			formrdesc("pg_yb_profile", YbProfileRelation_Rowtype_Id, true,
 					true, Natts_pg_yb_profile, Desc_pg_yb_profile);
@@ -4526,7 +4526,7 @@ RelationCacheInitializePhase2(void)
 					true, Natts_pg_yb_role_profile, Desc_pg_yb_role_profile);
 		}
 
-#define NUM_CRITICAL_SHARED_RELS    (YbLoginProfileCatalogsExist ? 7 : 5)   /* fix if you change list above */
+#define NUM_CRITICAL_SHARED_RELS    (*YBCGetGFlags()->ysql_enable_profile && YbLoginProfileCatalogsExist ? 7 : 5)   /* fix if you change list above */
 	}
 
 	MemoryContextSwitchTo(oldcxt);

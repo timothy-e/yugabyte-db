@@ -152,7 +152,7 @@ get_profile_oid(const char *prfname, bool missing_ok)
 	heap_close(rel, AccessShareLock);
 
 	if (!OidIsValid(result) && !missing_ok)
-		ereport(ERROR, 
+		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("profile \"%s\" does not exist", prfname)));
 
@@ -252,7 +252,7 @@ RemoveProfileById(Oid prfid)
 	if (!HeapTupleIsValid(tuple))
 	{
 		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT), 
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("profile with oid %u does not exist", prfid)));
 	}
 
@@ -373,12 +373,6 @@ get_role_oid_from_role_profile(Oid roleprfid)
 	return roleid;
 }
 
-/*
- * This function does not check that the profile tables exist. It is either
- * called before the database is initalized, or as a helper for another
- * function that should do this verification. In either case, it is up to the
- * caller to verify that this function can do the right thing.
- */
 HeapTuple
 get_role_profile_tuple(Oid roleid)
 {
@@ -411,7 +405,7 @@ get_role_profile_tuple(Oid roleid)
 
 
 /*
- * get_role_profile_oid - given a role oid, return the oid of the row in 
+ * get_role_profile_oid - given a role oid, return the oid of the row in
  * pg_yb_role_profile for that role.
  *
  * If missing_ok is false, throw an error if role profile is not found.
@@ -501,7 +495,6 @@ update_role_profile(Oid roleid, const char *rolename, Datum *new_record,
  * rolename: Name of the role. Required for error messages
  * prfname: Name of the profile.
  */
-
 void
 CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 {
@@ -578,7 +571,7 @@ CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
  *
  * roleid - the oid of the role
  * rolename - Name of the role. Used in the error message
- * isEenabled - bool value
+ * isEnabled - bool value
  */
 void
 EnableRoleProfile(Oid roleid, const char *rolename, bool is_enabled)
@@ -690,9 +683,6 @@ IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char *rolename)
 /*
  * YBCIncFailedAttemptsAndMaybeDisableProfile - increment failed_attempts
  * counter and disable if it exceeds limit
- * This function does not check that the table exists. Since it is called
- * before the database is initialized, it expects its caller to verify that
- * the profile tables exist.
  *
  * roleid - the oid of the role
  */
