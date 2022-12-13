@@ -3677,7 +3677,7 @@ getObjectDescription(const ObjectAddress *object)
 
 				Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile) GETSTRUCT(tup);
 
-				appendStringInfo(&buffer, _("role %s is associated with profile %s"),
+				appendStringInfo(&buffer, _("role \"%s\" is associated with profile %s"),
 								 GetUserNameFromId(rolprfform->rolid, false),
 								 get_profile_name(rolprfform->prfid));
 				break;
@@ -5284,7 +5284,7 @@ getObjectIdentityParts(const ObjectAddress *object,
 
 				Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile) GETSTRUCT(tup);
 
-				appendStringInfo(&buffer, _("role %s is associated with profile %s"),
+				appendStringInfo(&buffer, _("role \"%s\" is associated with profile %s"),
 								 GetUserNameFromId(rolprfform->rolid, false),
 								 get_profile_name(rolprfform->prfid));
 				break;
