@@ -719,6 +719,8 @@ YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
 	// Keep role enabled IFF role is enabled AND failed attempts < limit
 	rolisenabled = rolprfform->rolisenabled &&
 						(failed_attempts <= failed_attempts_limit);
+	if (!rolisenabled)
+		failed_attempts = failed_attempts_limit + 1;
 
 	YBCExecuteUpdateLoginAttempts(roleid, failed_attempts, rolisenabled);
 	CommitTransactionCommand();

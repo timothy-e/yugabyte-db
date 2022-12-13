@@ -667,7 +667,8 @@ ClientAuthentication(Port *port)
 		}
 		else
 		{
-			if (roleid != InvalidOid)
+			/* Do not increment login attempts if no password was supplied */
+			if (roleid != InvalidOid && status != STATUS_EOF)
 			{
 				YBCIncFailedAttemptsAndMaybeDisableProfile(roleid);
 			}

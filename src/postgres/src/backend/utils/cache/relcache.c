@@ -4132,8 +4132,8 @@ RelationBuildLocalRelation(const char *relname,
 	 * to the set of shared relations.
 	 */
 	if (shared_relation != IsSharedRelation(relid) && !yb_test_system_catalogs_creation)
-		elog(ERROR, "shared_relation flag for \"%s\" (%s) does not match IsSharedRelation(%u) (%s)",
-			 relname, shared_relation ? "true" : "false", relid, IsSharedRelation(relid) ? "true" : "false");
+		elog(ERROR, "shared_relation flag for \"%s\" does not match IsSharedRelation(%u)",
+			 relname, relid);
 
 	/* (Non-YB) shared relations had better be mapped, too */
 	Assert(IsYugaByteEnabled() ||
