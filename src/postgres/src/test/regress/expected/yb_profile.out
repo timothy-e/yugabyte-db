@@ -60,6 +60,11 @@ SELECT prfname, prffailedloginattempts FROM pg_catalog.pg_yb_profile ORDER BY OI
 -- Fail because it is a duplicate name
 CREATE PROFILE test_profile LIMIT FAILED_LOGIN_ATTEMPTS 4;
 ERROR:  profile "test_profile" already exists
+-- Fail because -ve numbers are not allowed
+CREATE PROFILE test_profile LIMIT FAILED_LOGIN_ATTEMPTS -1;
+ERROR:  syntax error at or near "-"
+LINE 1: CREATE PROFILE test_profile LIMIT FAILED_LOGIN_ATTEMPTS -1;
+                                                                ^
 --
 -- DROP PROFILE
 --

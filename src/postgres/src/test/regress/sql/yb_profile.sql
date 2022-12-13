@@ -22,8 +22,10 @@ CREATE PROFILE test_profile LIMIT FAILED_LOGIN_ATTEMPTS 3;
 SELECT prfname, prffailedloginattempts FROM pg_catalog.pg_yb_profile ORDER BY OID;
 
 -- Fail because it is a duplicate name
-
 CREATE PROFILE test_profile LIMIT FAILED_LOGIN_ATTEMPTS 4;
+
+-- Fail because -ve numbers are not allowed
+CREATE PROFILE test_profile LIMIT FAILED_LOGIN_ATTEMPTS -1;
 
 --
 -- DROP PROFILE
