@@ -117,6 +117,13 @@ public class TestYsqlUpgrade extends BasePgSQLTest {
   /** Since shared relations aren't cleared between tests, we can't reuse names. */
   private String sharedRelName;
 
+  @Override
+  protected Map<String, String> getTServerFlags() {
+    Map<String, String> flagMap = super.getTServerFlags();
+    flagMap.put("ysql_enable_profile", "true");
+    return flagMap;
+  }
+
   @Rule
   public TestName name = new TestName();
 
