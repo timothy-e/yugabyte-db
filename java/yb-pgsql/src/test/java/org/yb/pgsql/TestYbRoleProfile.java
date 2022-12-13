@@ -111,25 +111,25 @@ public class TestYbRoleProfile extends BasePgSQLTest {
 
   private void enableUserProfile(String username) throws Exception {
     try (Statement stmt = connection.createStatement()) {
-      stmt.execute(String.format("ALTER USER %s PROFILE ENABLE", username));
+      stmt.execute(String.format("ALTER USER %s ACCOUNT UNLOCK", username));
     }
   }
 
   private void disableUserProfile(String username) throws Exception {
     try (Statement stmt = connection.createStatement()) {
-      stmt.execute(String.format("ALTER USER %s PROFILE DISABLE", username));
+      stmt.execute(String.format("ALTER USER %s ACCOUNT LOCK", username));
     }
   }
 
   private void detachUserProfile(String username) throws Exception {
     try (Statement stmt = connection.createStatement()) {
-      stmt.execute(String.format("ALTER USER %s PROFILE DETACH", username));
+      stmt.execute(String.format("ALTER USER %s PROFILE default", username));
     }
   }
 
   private void attachUserProfile(String username, String profilename) throws Exception {
     try (Statement stmt = connection.createStatement()) {
-      stmt.execute(String.format("ALTER USER %s PROFILE ATTACH %s", username, profilename));
+      stmt.execute(String.format("ALTER USER %s PROFILE %s", username, profilename));
     }
   }
 
@@ -137,12 +137,14 @@ public class TestYbRoleProfile extends BasePgSQLTest {
   public void cleanup() throws Exception {
     try (Statement stmt = connection.createStatement()) {
       /* Cleanup fails if the tables don't exist.  */
-      boolean profile_exists = stmt.executeQuery("SELECT 1 FROM pg_class WHERE relname = 'pg_yb_profile'").next();
+      boolean profile_exists = stmt.executeQuery("SELECT 1 FROM pg_class WHERE" +
+          " relname = 'pg_yb_profile'").next();
 
       if (profile_exists) {
-        stmt.execute(String.format("ALTER USER %s PROFILE DETACH", USERNAME));
+        stmt.execute(String.format("ALTER USER %s PROFILE default", USERNAME));
         stmt.execute(String.format("DROP PROFILE IF EXISTS %s", PROFILE_1_NAME));
         stmt.execute(String.format("DROP PROFILE IF EXISTS %s", PROFILE_2_NAME));
+        stmt.execute(String.format("DROP OWNED BY %s", USERNAME));
         stmt.execute(String.format("DROP USER IF EXISTS %s", USERNAME));
       }
     }
@@ -156,7 +158,7 @@ public class TestYbRoleProfile extends BasePgSQLTest {
                                   PROFILE_1_NAME, PRF_1_FAILED_ATTEMPTS));
       stmt.execute(String.format("CREATE PROFILE %s LIMIT FAILED_LOGIN_ATTEMPTS %d",
                                   PROFILE_2_NAME, PRF_2_FAILED_ATTEMPTS));
-      stmt.execute(String.format("ALTER USER %s PROFILE ATTACH %s",
+      stmt.execute(String.format("ALTER USER %s PROFILE %s",
                                   USERNAME, PROFILE_1_NAME));
     }
   }
@@ -199,7 +201,8 @@ public class TestYbRoleProfile extends BasePgSQLTest {
 
     /* When the profile is removed, the user can log in again */
     detachUserProfile(USERNAME);
-    assertEquals(null, getProfileName(USERNAME));
+    enableUserProfile(USERNAME);
+    assertEquals("default", getProfileName(USERNAME));
     login(USERNAME, PASSWORD);
 
     /* Then, if we change the profile, the user has only that many failed attempts */

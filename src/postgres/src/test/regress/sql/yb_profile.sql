@@ -43,5 +43,6 @@ DROP PROFILE IF EXISTS non_existing;
 CREATE PROFILE exists_profile LIMIT FAILED_LOGIN_ATTEMPTS 3;
 DROP PROFILE IF EXISTS exists_profile;
 
--- fail: cannot delete default profile
+-- fail: cannot create OR drop default profile
+CREATE PROFILE "default" LIMIT FAILED_LOGIN_ATTEMPTS 4;
 DROP PROFILE "default";

@@ -35,6 +35,11 @@ SELECT oid, typname, typrelid FROM pg_type WHERE typname LIKE 'pg_yb_role_profil
 --
 CREATE PROFILE test_profile LIMIT FAILED_LOGIN_ATTEMPTS 3;
 CREATE USER restricted_user;
+-- fail: cannot lock/unlock a role that is not attached
+ALTER USER restricted_user ACCOUNT UNLOCK;
+ERROR:  role "restricted_user" is not associated with a profile
+ALTER USER restricted_user ACCOUNT LOCK;
+ERROR:  role "restricted_user" is not associated with a profile
 -- Can connect when no profiles are setup
 \c yugabyte restricted_user
 \c yugabyte yugabyte
@@ -51,7 +56,52 @@ SELECT rolname from pg_catalog.pg_roles WHERE rolname = 'restricted_user';
  restricted_user
 (1 row)
 
-ALTER USER restricted_user PROFILE ATTACH test_profile;
+ALTER USER restricted_user PROFILE test_profile;
+--
+-- Ensure dependencies betwee pg_yb_role_profile & pg_yb_profile
+-- and pg_yb_role_profile & pg_roles is setup correctly
+-- There should be one row
+SELECT count(*) FROM pg_yb_role_profile;
+ count
+-------
+     1
+(1 row)
+
+-- One row in pg_shdepend for the role profile
+SELECT count(*) FROM pg_shdepend shdep
+                    JOIN pg_yb_role_profile rpf on rpf.oid = shdep.objid
+                WHERE shdep.deptype = 'f';
+ count
+-------
+     1
+(1 row)
+
+-- One row in pg_shdepend for the role
+SELECT count(*) FROM pg_shdepend shdep
+                    JOIN pg_roles rol on rol.oid = shdep.refobjid
+                WHERE shdep.deptype = 'f' and rol.rolname = 'restricted_user';
+ count
+-------
+     1
+(1 row)
+
+-- One row in pg_depend for the role profile
+SELECT count(*) FROM pg_depend dep
+                    JOIN pg_yb_role_profile rpf on rpf.oid = dep.objid;
+ count
+-------
+     1
+(1 row)
+
+-- One row in pg_depend for the profile
+SELECT count(*) FROM pg_depend dep
+                    JOIN pg_yb_profile prf on prf.oid = dep.refobjid
+                    WHERE prf.prfname = 'test_profile';
+ count
+-------
+     1
+(1 row)
+
 -- Can connect when attached to a profile with default values
 \c yugabyte restricted_user
 \c yugabyte yugabyte
@@ -63,7 +113,7 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
  t            |                      0 | restricted_user | test_profile
 (1 row)
 
-ALTER USER restricted_user PROFILE DISABLE;
+ALTER USER restricted_user ACCOUNT LOCK;
 SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
     JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
@@ -72,7 +122,7 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
  f            |                      0 | restricted_user | test_profile
 (1 row)
 
-ALTER USER restricted_user PROFILE ENABLE;
+ALTER USER restricted_user ACCOUNT UNLOCK;
 SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
     JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
@@ -84,33 +134,111 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
 -- Can connect when attached to a profile and profile is enabled
 \c yugabyte restricted_user
 \c yugabyte yugabyte
--- fail: Cannot attach a role that has already been attached
-ALTER USER restricted_user PROFILE ATTACH test_profile;
-ERROR:  role "restricted_user" is associated with a profile
--- fail: Cannot drop a profile or role that has been attached
+-- Associating a role to the same profile is a no-op
+ALTER USER restricted_user PROFILE test_profile;
+WARNING:  role "restricted_user" is already associated with profile "test_profile"
+-- fail: Cannot drop a profile that has a role associated with it
 DROP PROFILE test_profile;
 ERROR:  cannot drop profile test_profile because other objects depend on it
-DETAIL:  a profile is attached to role restricted_user depends on profile test_profile
+DETAIL:  role restricted_user depends on profile test_profile
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
-DROP USER restricted_user;
-ERROR:  role "restricted_user" cannot be dropped because some objects depend on it
-DETAIL:  owner of a profile is attached to role restricted_user
--- Detach a role
-ALTER USER restricted_user PROFILE DETACH;
+-- Remove the association of a role by attaching to the default profile
+ALTER USER restricted_user PROFILE default;
 SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
     JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
- rolisenabled | rolfailedloginattempts | rolname | prfname
---------------+------------------------+---------+---------
+ rolisenabled | rolfailedloginattempts |     rolname     | prfname
+--------------+------------------------+-----------------+---------
+ t            |                      0 | restricted_user | default
+(1 row)
+
+--
+-- Ensure dependencies betwee pg_yb_role_profile & pg_yb_profile
+-- and pg_yb_role_profile & pg_roles is setup correctly
+-- There should be one row
+SELECT count(*) FROM pg_yb_role_profile;
+ count
+-------
+     1
+(1 row)
+
+-- One row in pg_shdepend for the role profile
+SELECT count(*) FROM pg_shdepend shdep
+                    JOIN pg_yb_role_profile rpf on rpf.oid = shdep.objid
+                WHERE shdep.deptype = 'f';
+ count
+-------
+     1
+(1 row)
+
+-- One row in pg_shdepend for the role
+SELECT count(*) FROM pg_shdepend shdep
+                    JOIN pg_roles rol on rol.oid = shdep.refobjid
+                WHERE shdep.deptype = 'f' and rol.rolname = 'restricted_user';
+ count
+-------
+     1
+(1 row)
+
+-- One row in pg_depend for the role profile
+SELECT count(*) FROM pg_depend dep
+                    JOIN pg_yb_role_profile rpf on rpf.oid = dep.objid;
+ count
+-------
+     1
+(1 row)
+
+-- One row in pg_depend for the profile
+SELECT count(*) FROM pg_depend dep
+                    JOIN pg_yb_profile prf on prf.oid = dep.refobjid
+                    WHERE prf.prfname = 'default';
+ count
+-------
+     1
+(1 row)
+
+-- can lock/unlock a role that is associated with default profile
+ALTER USER restricted_user ACCOUNT UNLOCK;
+ALTER USER restricted_user ACCOUNT LOCK;
+-- fail: Cannot attach to a non-existent profile
+ALTER USER restricted_user PROFILE non_existent;
+ERROR:  profile "non_existent" does not exist
+-- A role/user cannot be dropped because there is mapping to profile.
+DROP USER restricted_user;
+ERROR:  role "restricted_user" cannot be dropped because some objects depend on it
+DETAIL:  role restricted_user
+-- DROP OWNED BY is required to drop role/user. After dropping the user there should be 0 rows
+DROP OWNED BY restricted_user;
+DROP USER restricted_user;
+select count(*) from pg_yb_role_profile;
+ count
+-------
+     0
+(1 row)
+
+-- A role attached to a non-default profile can be dropped
+CREATE USER drop_user;
+ALTER USER drop_user PROFILE test_profile;
+SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
+    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
+    JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
+ rolisenabled | rolfailedloginattempts |  rolname  |   prfname
+--------------+------------------------+-----------+--------------
+ t            |                      0 | drop_user | test_profile
+(1 row)
+
+-- After dropping the user there should be 0 rows
+DROP OWNED BY drop_user;
+DROP USER drop_user;
+select count(*) from pg_yb_role_profile;
+ count
+-------
+     0
+(1 row)
+
+select * from pg_yb_role_profile;
+ rolisenabled | rolid | prfid | rolfailedloginattempts | rollockedat
+--------------+-------+-------+------------------------+-------------
 (0 rows)
 
--- fail: cannot enable/disable a role that is not attached
-ALTER USER restricted_user PROFILE ENABLE;
-ERROR:  role "restricted_user" is not associated with a profile
-ALTER USER restricted_user PROFILE DISABLE;
-ERROR:  role "restricted_user" is not associated with a profile
--- fail: Cannot attach to a non-existent profile
-ALTER USER restricted_user PROFILE ATTACH non_existent;
-ERROR:  profile "non_existent" does not exist
-DROP USER restricted_user;
 DROP PROFILE test_profile;

@@ -129,6 +129,10 @@ typedef enum DependencyType
  * this: they are protected by the existence of a physical file in the
  * tablespace.)
  *
+ * (d) a SHARED_DEPENDENCY_PROFILE entry means that the referenced object is
+ * a role is mentioned in a pg_yb_role_profile row.
+ * The referenced object must be a pg_authid entry.
+ *
  * SHARED_DEPENDENCY_INVALID is a value used as a parameter in internal
  * routines, and is not valid in the catalog itself.
  */
@@ -139,6 +143,7 @@ typedef enum SharedDependencyType
 	SHARED_DEPENDENCY_ACL = 'a',
 	SHARED_DEPENDENCY_POLICY = 'r',
 	SHARED_DEPENDENCY_TABLESPACE = 't',
+	SHARED_DEPENDENCY_PROFILE = 'f',
 	SHARED_DEPENDENCY_INVALID = 0
 } SharedDependencyType;
 

@@ -34,10 +34,10 @@ extern char* get_profile_name(Oid prfid);
 
 extern void RemoveProfileById(Oid prfid);
 
-extern Oid CreateRoleProfile(Oid roleid, const char* rolename,
+extern void CreateRoleProfile(Oid roleid, const char* rolename,
 		const char* profile);
-extern Oid EnableRoleProfile(Oid roleid, const char* rolename, bool isEnabled);
-extern Oid IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char* rolname);
+extern void EnableRoleProfile(Oid roleid, const char* rolename, bool isEnabled);
+extern void IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char* rolname);
 extern void YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid);
 extern void YBCResetFailedAttemptsIfAllowed(Oid roleid);
 

@@ -371,7 +371,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 
 %type <str>		copy_file_name
 				database_name access_method_clause access_method attr_name
-				name cursor_name file_name
+				name cursor_name file_name prfname
 				index_name opt_index_name cluster_index_specification
 
 %type <list>	func_name handler_name qual_Op qual_all_Op subquery_Op
@@ -1062,6 +1062,9 @@ opt_with:	WITH									{}
 			| /*EMPTY*/								{}
 		;
 
+prfname:	DEFAULT						{ $$ = pstrdup("default");}
+			| name					    { $$ = $1; }
+		;
 /*
  * Options for CREATE ROLE and ALTER ROLE (also used by CREATE/ALTER USER
  * for backwards compatibility).  Note: the only option required by SQL99
@@ -1125,17 +1128,11 @@ AlterOptRoleElem:
 				{
 					$$ = makeDefElem("rolemembers", (Node *)$2, @1);
 				}
-			| PROFILE DETACH
+			| PROFILE prfname
 				{
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
-					$$ = makeDefElem("detach", (Node *)makeInteger(true), @1);
-				}
-			| PROFILE ATTACH name
-				{
-					if (!*YBCGetGFlags()->ysql_enable_profile)
-						parser_ybc_not_support(@1, "PROFILE");
-					$$ = makeDefElem("profile", (Node *)makeString($3), @1);
+					$$ = makeDefElem("profile", (Node *)makeString($2), @1);
 				}
 			| ACCOUNT LOCK_P
 				{
@@ -1155,6 +1152,7 @@ AlterOptRoleElem:
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
 					$$ = makeDefElem("TEST_failed_attempt", (Node *)makeInteger(false), @1);
+					elog(WARNING, "ADD FAILED_LOGIN_ATTEMPTS is DEV Test rule");
 				}
 			| IDENT
 				{
