@@ -644,7 +644,7 @@ ClientAuthentication(Port *port)
 		if (HeapTupleIsValid(roleTup))
 		{
 			roleid = HeapTupleGetOid(roleTup);
-			profileTuple = get_role_profile_tuple(roleid);
+			profileTuple = get_role_profile_tuple_by_role_oid(roleid);
 			if (HeapTupleIsValid(profileTuple))
 			{
 				Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile)

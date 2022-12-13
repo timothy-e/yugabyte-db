@@ -72,6 +72,8 @@
 
 /* YB includes. */
 #include "pg_yb_utils.h"
+#include "catalog/pg_yb_role_profile_d.h"
+#include "catalog/pg_yb_profile_d.h"
 
 typedef enum
 {
@@ -1341,11 +1343,10 @@ shdepDropOwned(List *roleids, DropBehavior behavior)
 					}
 					break;
 				case SHARED_DEPENDENCY_PROFILE:
-					// Remove the entry in YbRoleProfileRelationId
-					obj.classId = sdepForm->classid;
-					obj.objectId = sdepForm->objid;
-					obj.objectSubId = sdepForm->objsubid;
-					add_exact_object_address(&obj, deleteobjs);
+					/*
+					 * If it is a profile object, do not delete. Profile associations can be
+					 * removed by ALTER USER <u> NOLOGIN
+					 */
 					break;
 			}
 		}

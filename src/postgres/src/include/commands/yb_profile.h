@@ -43,7 +43,8 @@ extern void YBCResetFailedAttemptsIfAllowed(Oid roleid);
 extern Oid	 get_role_profile_oid(Oid roleid, const char* rolname,
 		bool missing_ok);
 extern Oid	 get_role_oid_from_role_profile(Oid roleprfid);
-extern HeapTuple get_role_profile_tuple(Oid roleid);
+extern HeapTuple get_role_profile_tuple_by_role_oid(Oid roleid);
+extern HeapTuple get_role_profile_tuple_by_oid(Oid rolprfid);
 
 extern void RemoveRoleProfileForRole(Oid roleid, const char* rolename);
 extern void RemoveRoleProfileById(Oid roleprfid);
