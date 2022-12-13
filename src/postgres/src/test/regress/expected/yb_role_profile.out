@@ -8,13 +8,13 @@
                Table "pg_catalog.pg_yb_role_profile"
          Column         |  Type   | Collation | Nullable | Default
 ------------------------+---------+-----------+----------+---------
- rolisenabled           | boolean |           | not null |
  rolid                  | oid     |           | not null |
  prfid                  | oid     |           | not null |
+ rolisenabled           | boolean |           | not null |
  rolfailedloginattempts | integer |           | not null |
- rollockedat            | bigint  |           | not null |
+ rollockedat            | integer |           | not null |
 Indexes:
-    "pg_yb_role_profile_oid_index" PRIMARY KEY, lsm (rolid ASC), tablespace "pg_global"
+    "pg_yb_role_profile_oid_index" PRIMARY KEY, lsm (oid ASC), tablespace "pg_global"
 Tablespace: "pg_global"
 
 SELECT oid, relname, reltype, relnatts FROM pg_class WHERE relname IN ('pg_yb_role_profile', 'pg_yb_role_profile_oid_index');
@@ -237,8 +237,8 @@ select count(*) from pg_yb_role_profile;
 (1 row)
 
 select * from pg_yb_role_profile;
- rolisenabled | rolid | prfid | rolfailedloginattempts | rollockedat
---------------+-------+-------+------------------------+-------------
+ rolid | prfid | rolisenabled | rolfailedloginattempts | rollockedat
+-------+-------+--------------+------------------------+-------------
 (0 rows)
 
 DROP PROFILE test_profile;

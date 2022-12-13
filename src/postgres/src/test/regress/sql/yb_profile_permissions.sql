@@ -39,7 +39,7 @@ DROP PROFILE existing_profile;
 \c yugabyte yugabyte
 CREATE PROFILE existing_profile LIMIT FAILED_LOGIN_ATTEMPTS 3;
 
--- user_3 can execute these commands as it is a yb_superuser.
+-- user_3 can execute these commands as it is a yb_super_admin.
 
 \c yugabyte user_3
 CREATE PROFILE test_profile_3 LIMIT FAILED_LOGIN_ATTEMPTS 3;
