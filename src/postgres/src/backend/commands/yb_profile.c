@@ -368,7 +368,7 @@ get_role_oid_from_role_profile(Oid roleprfid)
 }
 
 HeapTuple
-get_role_profile_tuple(Oid roleid)
+get_role_profile_tuple_by_role_oid(Oid roleid)
 {
 	Relation	 rel;
 	HeapScanDesc scandesc;
@@ -397,6 +397,36 @@ get_role_profile_tuple(Oid roleid)
 	return tuple;
 }
 
+HeapTuple
+get_role_profile_tuple_by_oid(Oid rolprfoid)
+{
+	Relation	 rel;
+	HeapScanDesc scandesc;
+	HeapTuple	 tuple;
+	ScanKeyData	 entry[1];
+
+	CheckProfileCatalogsExist();
+
+	/*
+	 * Search pg_yb_role_profile.
+	 */
+	rel = heap_open(YbRoleProfileRelationId, AccessShareLock);
+
+	ScanKeyInit(&entry[0], ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ, rolprfoid);
+	scandesc = heap_beginscan_catalog(rel, 1, entry);
+	tuple = heap_getnext(scandesc, ForwardScanDirection);
+
+	/* Must copy tuple before releasing buffer */
+	if (HeapTupleIsValid(tuple))
+		tuple = heap_copytuple(tuple);
+
+	heap_endscan(scandesc);
+	heap_close(rel, AccessShareLock);
+
+	return tuple;
+}
+
 
 /*
  * get_role_profile_oid - given a role oid, return the oid of the row in
@@ -411,7 +441,7 @@ get_role_profile_oid(Oid roleid, const char *rolename, bool missing_ok)
 	Oid			 result;
 	HeapTuple	 tuple;
 
-	tuple = get_role_profile_tuple(roleid);
+	tuple = get_role_profile_tuple_by_role_oid(roleid);
 
 	/* We assume that there can be at most one matching tuple */
 	if (HeapTupleIsValid(tuple))
@@ -453,7 +483,7 @@ update_role_profile(Oid roleid, const char *rolename, Datum *new_record,
 	pg_yb_role_profile_rel = heap_open(YbRoleProfileRelationId, RowExclusiveLock);
 	pg_yb_role_profile_dsc = RelationGetDescr(pg_yb_role_profile_rel);
 
-	tuple = get_role_profile_tuple(roleid);
+	tuple = get_role_profile_tuple_by_role_oid(roleid);
 
 	/* We assume that there can be at most one matching tuple */
 	if (HeapTupleIsValid(tuple))
@@ -515,7 +545,7 @@ CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("profile \"%s\" does not exist", prfname)));
 
-	tuple = get_role_profile_tuple(roleid);
+	tuple = get_role_profile_tuple_by_role_oid(roleid);
 
 	// If there is no entry for the role, then create a map and return.
 	if (!HeapTupleIsValid(tuple))
@@ -604,7 +634,7 @@ YBCResetFailedAttemptsIfAllowed(Oid roleid)
 	HeapTuple rolprftuple;
 	Form_pg_yb_role_profile rolprfform;
 
-	rolprftuple = get_role_profile_tuple(roleid);
+	rolprftuple = get_role_profile_tuple_by_role_oid(roleid);
 
 	if (!HeapTupleIsValid(rolprftuple))
 		// Role is not associated with a profile.
@@ -634,7 +664,7 @@ YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
 	int 					new_failed_attempts;
 	bool 					rolisenabled;
 
-	rolprftuple = get_role_profile_tuple(roleid);
+	rolprftuple = get_role_profile_tuple_by_role_oid(roleid);
 
 	if (!HeapTupleIsValid(rolprftuple))
 		// Role is not associated with a profile.

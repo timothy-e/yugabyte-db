@@ -58,8 +58,6 @@
 #include "catalog/pg_ts_template.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_user_mapping.h"
-#include "catalog/pg_yb_profile.h"
-#include "catalog/pg_yb_tablegroup.h"
 #include "commands/dbcommands.h"
 #include "commands/defrem.h"
 #include "commands/event_trigger.h"
@@ -88,6 +86,10 @@
 #include "utils/regproc.h"
 #include "utils/syscache.h"
 #include "utils/tqual.h"
+
+#include "catalog/pg_yb_profile.h"
+#include "catalog/pg_yb_role_profile.h"
+#include "catalog/pg_yb_tablegroup.h"
 
 /*
  * ObjectProperty
@@ -3667,9 +3669,17 @@ getObjectDescription(const ObjectAddress *object)
 			}
 		case OCLASS_ROLE_YBPROFILE:
 			{
-				Oid roleid = get_role_oid_from_role_profile(object->objectId);
-				appendStringInfo(&buffer, _("role %s"),
-								 GetUserNameFromId(roleid, false));
+				HeapTuple tup = get_role_profile_tuple_by_oid(object->objectId);
+
+				if (!HeapTupleIsValid(tup))
+					elog(ERROR, "could not find tuple for role profile %u",
+						 object->objectId);
+
+				Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile) GETSTRUCT(tup);
+
+				appendStringInfo(&buffer, _("role %s is associated with profile %s"),
+								 GetUserNameFromId(rolprfform->rolid, false),
+								 get_profile_name(rolprfform->prfid));
 				break;
 			}
 			/*
@@ -5266,12 +5276,17 @@ getObjectIdentityParts(const ObjectAddress *object,
 			}
 		case OCLASS_ROLE_YBPROFILE:
 			{
-				Oid roleid = get_role_oid_from_role_profile(object->objectId);
-				if (roleid == InvalidOid)
-					elog(ERROR, "cache lookup failed for role profile %u",
+				HeapTuple tup = get_role_profile_tuple_by_oid(object->objectId);
+
+				if (!HeapTupleIsValid(tup))
+					elog(ERROR, "could not find tuple for role profile %u",
 						 object->objectId);
-				appendStringInfo(&buffer, _("profile for role %s"),
-								 GetUserNameFromId(object->objectId, false));
+
+				Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile) GETSTRUCT(tup);
+
+				appendStringInfo(&buffer, _("role %s is associated with profile %s"),
+								 GetUserNameFromId(rolprfform->rolid, false),
+								 get_profile_name(rolprfform->prfid));
 				break;
 			}
 

@@ -1061,7 +1061,7 @@ YBCExecuteUpdateLoginAttempts(Oid roleid,
 {
 	YBCPgStatement	update_stmt = NULL;
 	Datum			ybctid;
-	HeapTuple	 	tuple = get_role_profile_tuple(roleid);
+	HeapTuple	 	tuple = get_role_profile_tuple_by_role_oid(roleid);
 	Relation 		rel = relation_open(YbRoleProfileRelationId, AccessShareLock);
 	TupleDesc 		inputTupleDesc = rel->rd_att;
 	TupleDesc		outputTupleDesc = RelationGetDescr(rel);
