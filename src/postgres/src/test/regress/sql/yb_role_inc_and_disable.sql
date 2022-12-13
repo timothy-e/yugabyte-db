@@ -4,7 +4,7 @@ CREATE USER ind_user;
 SELECT prfname, prffailedloginattempts FROM pg_catalog.pg_yb_profile ORDER BY OID;
 SELECT rolname from pg_catalog.pg_roles WHERE rolname = 'ind_user';
 
-ALTER USER ind_user PROFILE ATTACH ind_profile;
+ALTER USER ind_user PROFILE ind_profile;
 
 SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
@@ -34,6 +34,7 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
     JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
 
-ALTER USER ind_user PROFILE DETACH;
+ALTER USER ind_user PROFILE default;
+DROP OWNED BY ind_user;
 DROP USER ind_user;
 DROP PROFILE ind_profile;

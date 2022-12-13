@@ -1152,6 +1152,8 @@ storeObjectDescription(StringInfo descs,
 				appendStringInfo(descs, _("target of %s"), objdesc);
 			else if (deptype == SHARED_DEPENDENCY_TABLESPACE)
 				appendStringInfo(descs, _("tablespace of %s"), objdesc);
+			else if (deptype == SHARED_DEPENDENCY_PROFILE)
+				appendStringInfo(descs, _("%s"), objdesc);
 			else
 				elog(ERROR, "unrecognized dependency type: %d",
 					 (int) deptype);
@@ -1337,6 +1339,13 @@ shdepDropOwned(List *roleids, DropBehavior behavior)
 						obj.objectSubId = sdepForm->objsubid;
 						add_exact_object_address(&obj, deleteobjs);
 					}
+					break;
+				case SHARED_DEPENDENCY_PROFILE:
+					// Remove the entry in YbRoleProfileRelationId
+					obj.classId = sdepForm->classid;
+					obj.objectId = sdepForm->objid;
+					obj.objectSubId = sdepForm->objsubid;
+					add_exact_object_address(&obj, deleteobjs);
 					break;
 			}
 		}

@@ -3668,7 +3668,7 @@ getObjectDescription(const ObjectAddress *object)
 		case OCLASS_ROLE_YBPROFILE:
 			{
 				Oid roleid = get_role_oid_from_role_profile(object->objectId);
-				appendStringInfo(&buffer, _("a profile is attached to role %s"),
+				appendStringInfo(&buffer, _("role %s"),
 								 GetUserNameFromId(roleid, false));
 				break;
 			}

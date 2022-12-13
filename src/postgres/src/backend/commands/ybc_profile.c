@@ -39,6 +39,7 @@
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
 #include "catalog/objectaccess.h"
+#include "catalog/pg_authid.h"
 #include "catalog/pg_yb_profile.h"
 #include "catalog/pg_yb_role_profile.h"
 #include "commands/comment.h"
@@ -302,10 +303,10 @@ RemoveProfileById(Oid prfid)
  *************************/
 
 /*
- * Create a role profile.
+ * Create a new map between role & profile.
  */
 Oid
-CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
+create_role_profile_map(Oid roleid, Oid prfid)
 {
 	Relation  rel;
 	Datum	  values[Natts_pg_yb_role_profile];
@@ -314,33 +315,6 @@ CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 	Oid		  roleprfid;
 
 	CheckProfileCatalogsExist();
-
-	/* Must be super user or yb_db_admin role */
-	if (!superuser() && !IsYbDbAdminUser(GetUserId()))
-		ereport(ERROR,
-				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 errmsg("permission denied to attach role \"%s\" to profile \"%s\"",
-						rolename, prfname),
-				 errhint("Must be superuser or a member of the yb_db_admin")));
-
-	/*
-	 * Check that there is a profile by this name.
-	 */
-	Oid prfid = get_profile_oid(prfname, true);
-	if (!OidIsValid(prfid))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("profile \"%s\" does not exist", prfname)));
-
-	/*
-	 * Check that there isn't another entry for role profile
-	 */
-	if (OidIsValid(get_role_profile_oid(roleid, rolename, true)))
-		ereport(ERROR,
-				(errcode(ERRCODE_DUPLICATE_OBJECT),
-				 errmsg("role \"%s\" is associated with a profile",
-					 rolename)));
-
 
 	/*
 	 * Insert tuple into pg_yb_role_profile.
@@ -360,17 +334,21 @@ CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 	roleprfid = CatalogTupleInsert(rel, tuple);
 
 	// Record dependencies on profile and role
-	ObjectAddress myself, profile;
+	ObjectAddress myself, profile, auth;
 
 	myself.classId = YbRoleProfileRelationId;
 	myself.objectId = roleprfid;
 	myself.objectSubId = 0;
 
+	auth.classId = AuthIdRelationId;
+	auth.objectId = roleid;
+	auth.objectSubId = 0;
+
 	profile.classId = YbProfileRelationId;
 	profile.objectId = prfid;
 	profile.objectSubId = 0;
 
-	recordDependencyOnOwner(YbRoleProfileRelationId, roleprfid, roleid);
+	recordSharedDependencyOn(&myself, &auth, SHARED_DEPENDENCY_PROFILE);
 	recordDependencyOn(&myself, &profile, DEPENDENCY_NORMAL);
 
 	heap_freetuple(tuple);
@@ -490,7 +468,7 @@ get_role_profile_oid(Oid roleid, const char *rolename, bool missing_ok)
 	return result;
 }
 
-Oid
+void
 update_role_profile(Oid roleid, const char *rolename, Datum *new_record,
 					bool *new_record_nulls, bool *new_record_repl,
 					bool missing_ok)
@@ -532,7 +510,85 @@ update_role_profile(Oid roleid, const char *rolename, Datum *new_record,
 	 */
 	heap_close(pg_yb_role_profile_rel, NoLock);
 
-	return roleprfid;
+	return;
+}
+
+/*
+ * Create a new mapping between role and profile.
+ * roleid: OID of the role
+ * rolename: Name of the role. Required for error messages
+ * prfname: Name of the profile.
+ */
+
+void
+CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
+{
+	HeapTuple tuple;
+	Form_pg_yb_role_profile rolprfform;
+	Oid currentprfid;
+	Oid rolprfid;
+
+	/* Must be super user or yb_db_admin role */
+	if (!superuser() && !IsYbDbAdminUser(GetUserId()))
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("permission denied to attach role \"%s\" to profile \"%s\"",
+						rolename, prfname),
+				 errhint("Must be superuser or a member of the yb_db_admin")));
+
+	/*
+	 * Check that there is a profile by this name.
+	 */
+	Oid prfid = get_profile_oid(prfname, true);
+	if (!OidIsValid(prfid))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("profile \"%s\" does not exist", prfname)));
+
+	tuple = get_role_profile_tuple(roleid);
+
+	// If there is no entry for the role, then create a map and return.
+	if (!HeapTupleIsValid(tuple))
+	{
+		create_role_profile_map(roleid, prfid);
+		return;
+	}
+
+	rolprfid = HeapTupleGetOid(tuple);
+	rolprfform = (Form_pg_yb_role_profile) GETSTRUCT(tuple);
+	currentprfid = rolprfform->prfid;
+
+	// Check if the role is already mapped to the same profile.
+	if (currentprfid == prfid)
+	{
+		elog(WARNING, "role \"%s\" is already associated with profile \"%s\"",
+				rolename, prfname);
+		return;
+	}
+
+	// There is an entry for the role and it has be updated to another profile.
+	Datum		new_record[Natts_pg_yb_role_profile];
+	bool		new_record_nulls[Natts_pg_yb_role_profile];
+	bool		new_record_repl[Natts_pg_yb_role_profile];
+
+	/*
+	 * Build an updated tuple with isEnabled set to the new value
+	 */
+	MemSet(new_record, 0, sizeof(new_record));
+	MemSet(new_record_nulls, false, sizeof(new_record_nulls));
+	MemSet(new_record_repl, false, sizeof(new_record_repl));
+
+	new_record[Anum_pg_yb_role_profile_prfid - 1] = prfid;
+	new_record_repl[Anum_pg_yb_role_profile_prfid - 1] = true;
+
+	update_role_profile(roleid, rolename, new_record,
+						new_record_nulls,
+						new_record_repl, false);
+
+	// Change the dependency to the new profile
+	changeDependencyFor(YbRoleProfileRelationId, rolprfid,
+						YbProfileRelationId, currentprfid, prfid);
+	return;
 }
 
 /*
@@ -542,7 +598,7 @@ update_role_profile(Oid roleid, const char *rolename, Datum *new_record,
  * rolename - Name of the role. Used in the error message
  * isEenabled - bool value
  */
-Oid
+void
 EnableRoleProfile(Oid roleid, const char *rolename, bool isEnabled)
 {
 	Datum		new_record[Natts_pg_yb_role_profile];
@@ -561,8 +617,9 @@ EnableRoleProfile(Oid roleid, const char *rolename, bool isEnabled)
 	new_record[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = Int16GetDatum(0);
 	new_record_repl[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = true;
 
-	return update_role_profile(roleid, rolename, new_record, new_record_nulls,
+	update_role_profile(roleid, rolename, new_record, new_record_nulls,
 			new_record_repl, false);
+	return;
 }
 
 /*
@@ -598,7 +655,7 @@ YBCResetFailedAttemptsIfAllowed(Oid roleid)
  *
  * roleid - the oid of the role
  */
-Oid
+void
 IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char *rolename)
 {
 	Datum		new_record[Natts_pg_yb_role_profile];
@@ -616,7 +673,7 @@ IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char *rolename)
 
 	if (!HeapTupleIsValid(rolprftuple))
 		// Role is not associated with a profile.
-		return InvalidOid;
+		return;
 
 	Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile)
 									GETSTRUCT(rolprftuple);
@@ -644,8 +701,9 @@ IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char *rolename)
 				(failed_attempts <= failed_attempts_limit));
 	new_record_repl[Anum_pg_yb_role_profile_rolisenabled - 1] = true;
 
-	return update_role_profile(roleid, rolename, new_record, new_record_nulls,
+	update_role_profile(roleid, rolename, new_record, new_record_nulls,
 			new_record_repl, true);
+	return;
 }
 
 /*
@@ -716,7 +774,7 @@ RemoveRoleProfileForRole(Oid roleid, const char *rolename)
  *
  * roleprfid - the oid of the role_profile entry.
  */
-void RemoveRoleProfileById(Oid roleprfoid)
+void RemoveRoleProfileById(Oid roleprfid)
 {
 	Relation	 rel;
 	HeapScanDesc scandesc;
@@ -731,7 +789,7 @@ void RemoveRoleProfileById(Oid roleprfoid)
 	 * Find the profile to delete.
 	 */
 	ScanKeyInit(&skey[0], ObjectIdAttributeNumber, BTEqualStrategyNumber,
-				F_OIDEQ, ObjectIdGetDatum(roleprfoid));
+				F_OIDEQ, ObjectIdGetDatum(roleprfid));
 	scandesc = heap_beginscan_catalog(rel, 1, skey);
 	tuple = heap_getnext(scandesc, ForwardScanDirection);
 
@@ -739,7 +797,7 @@ void RemoveRoleProfileById(Oid roleprfoid)
 	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("role profile"
-						"%d does exist", roleprfoid)));
+						"%d does not exist", roleprfid)));
 
 	/*
 	 * Remove the pg_yb_role_profile tuple

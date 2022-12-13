@@ -11,19 +11,27 @@ CREATE PROFILE existing_profile LIMIT FAILED_LOGIN_ATTEMPTS 3;
 
 -- None of these commands should be allowed to a normal user
 CREATE PROFILE test_profile_1 LIMIT FAILED_LOGIN_ATTEMPTS 3;
-ALTER USER restricted_user PROFILE ATTACH test_profile_1;
+ALTER USER restricted_user PROFILE test_profile_1;
 ALTER USER restricted_user ACCOUNT LOCK;
 ALTER USER restricted_user ACCOUNT UNLOCK;
-ALTER USER restricted_user PROFILE DETACH;
 DROP PROFILE existing_profile;
 
 -- user_2 can execute these commands as it is a super user.
 \c yugabyte user_2
 CREATE PROFILE test_profile_2 LIMIT FAILED_LOGIN_ATTEMPTS 3;
-ALTER USER restricted_user PROFILE ATTACH test_profile_2;
+ALTER USER restricted_user PROFILE test_profile_2;
+SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
+    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
+    JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
+
 ALTER USER restricted_user ACCOUNT LOCK;
 ALTER USER restricted_user ACCOUNT UNLOCK;
-ALTER USER restricted_user PROFILE DETACH;
+
+ALTER USER restricted_user PROFILE default;
+SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
+    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
+    JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
+
 DROP PROFILE test_profile_2;
 DROP PROFILE existing_profile;
 
@@ -35,14 +43,25 @@ CREATE PROFILE existing_profile LIMIT FAILED_LOGIN_ATTEMPTS 3;
 
 \c yugabyte user_3
 CREATE PROFILE test_profile_3 LIMIT FAILED_LOGIN_ATTEMPTS 3;
-ALTER USER restricted_user PROFILE ATTACH test_profile_3;
+ALTER USER restricted_user PROFILE test_profile_3;
+SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
+    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
+    JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
+
 ALTER USER restricted_user ACCOUNT LOCK;
 ALTER USER restricted_user ACCOUNT UNLOCK;
-ALTER USER restricted_user PROFILE DETACH;
+
+ALTER USER restricted_user PROFILE default;
+SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
+    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
+    JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
+
 DROP PROFILE test_profile_3;
 DROP PROFILE existing_profile;
 
 \c yugabyte yugabyte
+DROP OWNED BY restricted_user;
+DROP USER restricted_user;
 DROP USER user_1;
 DROP USER user_2;
 DROP USER user_3;
