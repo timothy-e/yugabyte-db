@@ -82,7 +82,7 @@ DEFINE_UNKNOWN_bool(ysql_disable_server_file_access, false,
             "If true, disables read, write, and execute of local server files. "
             "File access can be re-enabled if set to false.");
 
-DEFINE_UNKNOWN_bool(ysql_enable_profile, false, "Enable PROFILE feature.");
+DEFINE_NON_RUNTIME_bool(ysql_enable_profile, false, "Enable PROFILE feature.");
 TAG_FLAG(ysql_enable_profile, advanced);
 TAG_FLAG(ysql_enable_profile, hidden);
 

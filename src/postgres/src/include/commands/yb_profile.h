@@ -1,7 +1,7 @@
 /*--------------------------------------------------------------------------------------------------
  *
- * ybc_profile.h
- *	  prototypes for ybc_profile.c
+ * yb_profile.h
+ *	  prototypes for yb_profile.c
  *
  * Copyright (c) YugaByte, Inc.
  *
@@ -15,7 +15,7 @@
  * or implied.  See the License for the specific language governing permissions and limitations
  * under the License.
  *
- * src/include/commands/ybc_profile.h
+ * src/include/commands/yb_profile.h
  *
  *--------------------------------------------------------------------------------------------------
  */

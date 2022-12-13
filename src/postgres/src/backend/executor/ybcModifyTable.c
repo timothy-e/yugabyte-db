@@ -30,7 +30,7 @@
 #include "catalog/pg_yb_role_profile.h"
 #include "catalog/pg_yb_role_profile_d.h"
 #include "catalog/yb_type.h"
-#include "commands/ybc_profile.h"
+#include "commands/yb_profile.h"
 #include "utils/relcache.h"
 #include "utils/rel.h"
 #include "utils/lsyscache.h"
@@ -1069,10 +1069,10 @@ YBCExecuteUpdateLoginAttempts(Oid roleid,
 
 	/* Create update statement. */
 	HandleYBStatus(YBCPgNewUpdate(dboid,
-								  YbRoleProfileRelationId,
-								  true,
-								  YBCIsRegionLocal(rel),
-								  &update_stmt));
+				   YbRoleProfileRelationId,
+				   true,
+				   YBCIsRegionLocal(rel),
+				   &update_stmt));
 
 	/*
 	 * Look for ybctid. Raise error if ybctid is not found.
@@ -1085,8 +1085,8 @@ YBCExecuteUpdateLoginAttempts(Oid roleid,
 	if (ybctid == 0)
 	{
 		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_COLUMN), errmsg(
-					"Missing column ybctid in UPDATE request to YugaByte database")));
+				(errcode(ERRCODE_UNDEFINED_COLUMN),
+				 errmsg("Missing column ybctid in UPDATE request to YugaByte database")));
 	}
 
 	YBCBindTupleId(update_stmt, ybctid);

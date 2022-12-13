@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------------------------------
  *
- * ybc_profile.c
+ * yb_profile.c
  *        Commands to implement PROFILE functionality.
  *
  * Copyright (c) YugaByte, Inc.
@@ -16,7 +16,7 @@
  * under the License.
  *
  * IDENTIFICATION
- *        src/backend/commands/ybc_profile.c
+ *        src/backend/commands/yb_profile.c
  *
  *------------------------------------------------------------------------------
  */
@@ -39,7 +39,7 @@
 
 #include "catalog/pg_yb_profile.h"
 #include "catalog/pg_yb_role_profile.h"
-#include "commands/ybc_profile.h"
+#include "commands/yb_profile.h"
 #include "yb/yql/pggate/ybc_pggate.h"
 #include "executor/ybcModifyTable.h"
 
@@ -159,12 +159,6 @@ get_profile_oid(const char *prfname, bool missing_ok)
 	return result;
 }
 
-/*
- * This function does not check that the profile tables exist. It is either
- * called before the database is initalized, or as a helper for another
- * function that should do this verification. In either case, it is up to the
- * caller to verify that this function can do the right thing.
- */
 HeapTuple
 get_profile_tuple(Oid prfid)
 {
@@ -509,7 +503,8 @@ CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied to attach role \"%s\" to profile \"%s\"",
 						rolename, prfname),
-				 errhint("Must be superuser or a member of the yb_db_admin")));
+				 errhint("Must be superuser or a member of the yb_db_admin "
+				 		 "role to attach a profile.")));
 
 	/*
 	 * Check that there is a profile by this name.
@@ -537,11 +532,11 @@ CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 	if (currentprfid == prfid)
 	{
 		elog(WARNING, "role \"%s\" is already associated with profile \"%s\"",
-				rolename, prfname);
+			 rolename, prfname);
 		return;
 	}
 
-	// There is an entry for the role and it has be updated to point to 
+	// There is an entry for the role and it has be updated to point to
 	// another profile.
 	Datum		new_record[Natts_pg_yb_role_profile];
 	bool		new_record_nulls[Natts_pg_yb_role_profile];

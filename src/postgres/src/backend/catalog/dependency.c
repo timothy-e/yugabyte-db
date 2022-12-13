@@ -75,7 +75,7 @@
 #include "commands/tablegroup.h"
 #include "commands/trigger.h"
 #include "commands/typecmds.h"
-#include "commands/ybc_profile.h"
+#include "commands/yb_profile.h"
 #include "nodes/nodeFuncs.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteRemove.h"

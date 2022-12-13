@@ -48,11 +48,6 @@
 #include "catalog/pg_database.h"
 #include "catalog/pg_db_role_setting.h"
 #include "catalog/pg_tablespace.h"
-#include "catalog/pg_yb_catalog_version.h"
-#include "catalog/pg_yb_tablegroup.h"
-#include "catalog/yb_catalog_version.h"
-#include "catalog/pg_yb_profile.h"
-#include "catalog/pg_yb_role_profile.h"
 #include "libpq/auth.h"
 #include "libpq/libpq-be.h"
 #include "mb/pg_wchar.h"
@@ -84,6 +79,11 @@
 #include "utils/tqual.h"
 
 #include "pg_yb_utils.h"
+#include "catalog/pg_yb_catalog_version.h"
+#include "catalog/pg_yb_tablegroup.h"
+#include "catalog/yb_catalog_version.h"
+#include "catalog/pg_yb_profile.h"
+#include "catalog/pg_yb_role_profile.h"
 
 static HeapTuple GetDatabaseTuple(const char *dbname);
 static HeapTuple GetDatabaseTupleByOid(Oid dboid);

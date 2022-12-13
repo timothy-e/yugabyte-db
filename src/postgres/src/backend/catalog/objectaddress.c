@@ -69,7 +69,7 @@
 #include "commands/tablespace.h"
 #include "commands/tablegroup.h"
 #include "commands/trigger.h"
-#include "commands/ybc_profile.h"
+#include "commands/yb_profile.h"
 #include "foreign/foreign.h"
 #include "funcapi.h"
 #include "miscadmin.h"
@@ -2485,8 +2485,8 @@ check_object_ownership(Oid roleid, ObjectType objtype, ObjectAddress address,
 				ereport(ERROR,
 						(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 						 errmsg("permission denied to drop profile"),
-						 errhint("Must be superuser or "
-								 "a member of the yb_db_admin")));
+						 errhint("Must be superuser or a member of the yb_db_admin "
+								 "role to drop a profile.")));
 			break;
 
 		default:

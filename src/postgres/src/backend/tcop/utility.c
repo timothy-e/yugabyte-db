@@ -58,7 +58,7 @@
 #include "commands/user.h"
 #include "commands/vacuum.h"
 #include "commands/view.h"
-#include "commands/ybc_profile.h"
+#include "commands/yb_profile.h"
 #include "libpq/libpq-be.h"
 #include "miscadmin.h"
 #include "parser/parse_utilcmd.h"

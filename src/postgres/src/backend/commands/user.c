@@ -30,7 +30,7 @@
 #include "commands/dbcommands.h"
 #include "commands/seclabel.h"
 #include "commands/user.h"
-#include "commands/ybc_profile.h"
+#include "commands/yb_profile.h"
 #include "libpq/crypt.h"
 #include "miscadmin.h"
 #include "storage/lmgr.h"

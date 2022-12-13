@@ -66,9 +66,6 @@
 #include "catalog/pg_type.h"
 #include "catalog/schemapg.h"
 #include "catalog/storage.h"
-#include "catalog/yb_catalog_version.h"
-#include "catalog/pg_yb_profile.h"
-#include "catalog/pg_yb_role_profile.h"
 #include "commands/dbcommands.h"
 #include "commands/policy.h"
 #include "commands/trigger.h"
@@ -100,6 +97,9 @@
 
 #include "pg_yb_utils.h"
 #include "access/yb_scan.h"
+#include "catalog/yb_catalog_version.h"
+#include "catalog/pg_yb_profile.h"
+#include "catalog/pg_yb_role_profile.h"
 
 #define RELCACHE_INIT_FILEMAGIC		0x573266	/* version ID value */
 
@@ -116,6 +116,7 @@ static const FormData_pg_attribute Desc_pg_auth_members[Natts_pg_auth_members] =
 static const FormData_pg_attribute Desc_pg_index[Natts_pg_index] = {Schema_pg_index};
 static const FormData_pg_attribute Desc_pg_shseclabel[Natts_pg_shseclabel] = {Schema_pg_shseclabel};
 static const FormData_pg_attribute Desc_pg_subscription[Natts_pg_subscription] = {Schema_pg_subscription};
+
 static const FormData_pg_attribute Desc_pg_yb_profile[Natts_pg_yb_profile] = {Schema_pg_yb_profile};
 static const FormData_pg_attribute Desc_pg_yb_role_profile[Natts_pg_yb_role_profile] = {Schema_pg_yb_role_profile};
 
