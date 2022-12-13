@@ -23,52 +23,25 @@
 
 #include "postgres.h"
 
-#include <dirent.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
-#include "access/heapam.h"
 #include "access/htup_details.h"
 #include "access/reloptions.h"
 #include "access/sysattr.h"
 #include "access/xact.h"
-#include "access/xlog.h"
-#include "access/xloginsert.h"
-#include "catalog/catalog.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
-#include "catalog/namespace.h"
 #include "catalog/objectaccess.h"
 #include "catalog/pg_authid.h"
-#include "catalog/pg_yb_profile.h"
-#include "catalog/pg_yb_role_profile.h"
-#include "commands/comment.h"
-#include "commands/dbcommands.h"
-#include "commands/defrem.h"
-#include "commands/seclabel.h"
-#include "commands/tablecmds.h"
-#include "commands/ybccmds.h"
-#include "commands/ybc_profile.h"
-#include "common/file_perm.h"
 #include "miscadmin.h"
-#include "postmaster/bgwriter.h"
-#include "storage/fd.h"
-#include "storage/lmgr.h"
-#include "storage/standby.h"
-#include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
-#include "utils/guc.h"
-#include "utils/lsyscache.h"
-#include "utils/memutils.h"
 #include "utils/rel.h"
 #include "utils/syscache.h"
-#include "utils/tqual.h"
-#include "utils/varlena.h"
 
+#include "catalog/pg_yb_profile.h"
+#include "catalog/pg_yb_role_profile.h"
+#include "commands/ybc_profile.h"
 #include "yb/yql/pggate/ybc_pggate.h"
 #include "executor/ybcModifyTable.h"
-#include "pg_yb_utils.h"
 
 #define DEFAULT_PROFILE_OID 8057
 
@@ -181,7 +154,7 @@ get_profile_oid(const char *prfname, bool missing_ok)
 	if (!OidIsValid(result) && !missing_ok)
 		ereport(ERROR, 
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
-						errmsg("profile \"%s\" does not exist", prfname)));
+				 errmsg("profile \"%s\" does not exist", prfname)));
 
 	return result;
 }
@@ -225,7 +198,9 @@ get_profile_tuple(Oid prfid)
 /*
  * get_profile_name - given a profile OID, look up the name
  *
- * Returns a palloc'd string, or NULL if no such profile.
+ * prfid: OID of the profile.
+ *
+ * Returns a palloc'd string.
  */
 char *
 get_profile_name(Oid prfid)
@@ -246,7 +221,7 @@ get_profile_name(Oid prfid)
  * If a profile does not exist with the provided oid, then an error is
  * raised.
  *
- * grp_oid - the oid of the profile.
+ * prfid - the oid of the profile.
  */
 void
 RemoveProfileById(Oid prfid)
@@ -261,7 +236,7 @@ RemoveProfileById(Oid prfid)
 	if (prfid == DEFAULT_PROFILE_OID)
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-					errmsg("profile \"default\" cannot be dropped")));
+				 errmsg("profile \"default\" cannot be dropped")));
 
 	pg_profile_rel = heap_open(YbProfileRelationId, RowExclusiveLock);
 
@@ -273,15 +248,12 @@ RemoveProfileById(Oid prfid)
 	scandesc = heap_beginscan_catalog(pg_profile_rel, 1, skey);
 	tuple = heap_getnext(scandesc, ForwardScanDirection);
 
-	/* If the profile exists, then remove it, otherwise raise an error. */
+	/* If the profile does not exist, raise an error. */
 	if (!HeapTupleIsValid(tuple))
 	{
 		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("profile "
-																  "with oid %u "
-																  "does not "
-																  "exist",
-																  prfid)));
+				(errcode(ERRCODE_UNDEFINED_OBJECT), 
+				 errmsg("profile with oid %u does not exist", prfid)));
 	}
 
 	/* DROP hook for the profile being removed */
@@ -439,8 +411,8 @@ get_role_profile_tuple(Oid roleid)
 
 
 /*
- * get_role_profile_oid - given a pg_auth oid, look up the mapping 
- * in pg_yb_role_profile
+ * get_role_profile_oid - given a role oid, return the oid of the row in 
+ * pg_yb_role_profile for that role.
  *
  * If missing_ok is false, throw an error if role profile is not found.
  * If true, just return InvalidOid.
@@ -462,12 +434,22 @@ get_role_profile_oid(Oid roleid, const char *rolename, bool missing_ok)
 	if (!OidIsValid(result) && !missing_ok)
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
-						errmsg("role \"%s\" is not associated with a profile",
-							rolename)));
+				 errmsg("role \"%s\" is not associated with a profile",
+						rolename)));
 
 	return result;
 }
 
+/*
+ * update_role_profile: Utility fn. to update a row in pg_yb_role_profile
+ *
+ * roleid: OID of the role
+ * rolename: Name of the role. Used in error messages
+ * new_record: array with new values
+ * new_record_nulls: bool array. element is true if column is updated to null
+ * new_record_repl: bool array. element is true if column has to be updated
+ * missing_ok: OK if row not found for roleid.
+ */
 void
 update_role_profile(Oid roleid, const char *rolename, Datum *new_record,
 					bool *new_record_nulls, bool *new_record_repl,
@@ -500,8 +482,8 @@ update_role_profile(Oid roleid, const char *rolename, Datum *new_record,
 	else if (!missing_ok)
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
-						errmsg("role \"%s\" is not associated with a profile",
-							rolename)));
+				 errmsg("role \"%s\" is not associated with a profile",
+						rolename)));
 	else
 		roleprfid = InvalidOid;
 
@@ -599,20 +581,20 @@ CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
  * isEenabled - bool value
  */
 void
-EnableRoleProfile(Oid roleid, const char *rolename, bool isEnabled)
+EnableRoleProfile(Oid roleid, const char *rolename, bool is_enabled)
 {
 	Datum		new_record[Natts_pg_yb_role_profile];
 	bool		new_record_nulls[Natts_pg_yb_role_profile];
 	bool		new_record_repl[Natts_pg_yb_role_profile];
 
 	/*
-	 * Build an updated tuple with isEnabled set to the new value
+	 * Build an updated tuple with is_enabled set to the new value
 	 */
 	MemSet(new_record, 0, sizeof(new_record));
 	MemSet(new_record_nulls, false, sizeof(new_record_nulls));
 	MemSet(new_record_repl, false, sizeof(new_record_repl));
 
-	new_record[Anum_pg_yb_role_profile_rolisenabled - 1] = BoolGetDatum(isEnabled);
+	new_record[Anum_pg_yb_role_profile_rolisenabled - 1] = BoolGetDatum(is_enabled);
 	new_record_repl[Anum_pg_yb_role_profile_rolisenabled - 1] = true;
 	new_record[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = Int16GetDatum(0);
 	new_record_repl[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = true;
@@ -682,8 +664,7 @@ IncFailedAttemptsAndMaybeDisableProfile(Oid roleid, const char *rolename)
 	if (!HeapTupleIsValid(prftuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
-						errmsg("profile \"%d\" not found!",
-							roleid)));
+				 errmsg("profile \"%d\" not found!", roleid)));
 
 	Form_pg_yb_profile prfform = (Form_pg_yb_profile) GETSTRUCT(prftuple);
 
@@ -738,8 +719,7 @@ YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
 	if (!HeapTupleIsValid(prftuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
-						errmsg("Profile \"%d\" not found!",
-							roleid)));
+				 errmsg("profile \"%d\" not found!", roleid)));
 
 	prfform = (Form_pg_yb_profile) GETSTRUCT(prftuple);
 
@@ -796,8 +776,8 @@ void RemoveRoleProfileById(Oid roleprfid)
 	/* If the profile exists, then remove it, otherwise raise an error. */
 	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("role profile"
-						"%d does not exist", roleprfid)));
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("role profile %d does not exist", roleprfid)));
 
 	/*
 	 * Remove the pg_yb_role_profile tuple
