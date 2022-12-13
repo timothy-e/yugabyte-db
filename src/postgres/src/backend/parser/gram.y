@@ -1146,14 +1146,6 @@ AlterOptRoleElem:
 						parser_ybc_not_support(@1, "PROFILE");
 					$$ = makeDefElem("enabled", (Node *)makeInteger(true), @1);
 				}
-				/* CAUTION: DEV RULE to test increment failed attempts counter and disable profile */
-			| PROFILE ADD_P FAILED_LOGIN_ATTEMPTS
-				{
-					if (!*YBCGetGFlags()->ysql_enable_profile)
-						parser_ybc_not_support(@1, "PROFILE");
-					$$ = makeDefElem("TEST_failed_attempt", (Node *)makeInteger(false), @1);
-					elog(WARNING, "ADD FAILED_LOGIN_ATTEMPTS is DEV Test rule");
-				}
 			| IDENT
 				{
 					/*
