@@ -280,9 +280,12 @@ public class TestYbRoleProfile extends BasePgSQLTest {
     }
     assertProfileStateForUser(USERNAME, PRF_1_FAILED_ATTEMPTS + 1, false);
 
-    /* Now even the correct password will not let us in */
+    /*
+     * Now even the correct password will not let us in.
+     * Failed attempts above the limit + 1 are not counted.
+     */
     attemptLogin(USERNAME, PASSWORD);
     attemptLogin(USERNAME, "wrong");
-    assertProfileStateForUser(USERNAME, PRF_1_FAILED_ATTEMPTS + 3, false);
+    assertProfileStateForUser(USERNAME, PRF_1_FAILED_ATTEMPTS + 1, false);
   }
 }

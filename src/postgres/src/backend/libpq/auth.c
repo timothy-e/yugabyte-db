@@ -654,8 +654,8 @@ ClientAuthentication(Port *port)
 					profileisdisabled = true;
 				}
 			}
+			ReleaseSysCache(roleTup);
 		}
-		ReleaseSysCache(roleTup);
 
 		if (status == STATUS_OK && !profileisdisabled)
 		{
@@ -667,7 +667,8 @@ ClientAuthentication(Port *port)
 		}
 		else
 		{
-			if (roleid != InvalidOid)
+			/* Do not increment login attempts if no password was supplied */
+			if (roleid != InvalidOid && status != STATUS_EOF)
 			{
 				YBCIncFailedAttemptsAndMaybeDisableProfile(roleid);
 			}

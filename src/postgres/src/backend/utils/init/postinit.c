@@ -704,7 +704,7 @@ InitPostgresImpl(const char *in_dbname, Oid dboid, const char *username,
 		YbRegisterSysTableForPrefetching(
 				AuthMemRelationId);       // pg_auth_members
 
-		if (YbLoginProfileCatalogsExist)
+		if (*YBCGetGFlags()->ysql_enable_profile && YbLoginProfileCatalogsExist)
 		{
 			YbRegisterSysTableForPrefetching(
 					YbProfileRelationId); // pg_yb_profile
