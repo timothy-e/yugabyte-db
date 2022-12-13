@@ -28,6 +28,7 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yb.YBTestRunner;
+import org.yb.minicluster.YsqlSnapshotVersion;
 
 import com.yugabyte.util.PSQLException;
 @RunWith(value=YBTestRunner.class)
@@ -135,10 +136,15 @@ public class TestYbRoleProfile extends BasePgSQLTest {
   @After
   public void cleanup() throws Exception {
     try (Statement stmt = connection.createStatement()) {
-      stmt.execute(String.format("ALTER USER %s PROFILE DETACH", USERNAME));
-      stmt.execute(String.format("DROP PROFILE %s", PROFILE_1_NAME));
-      stmt.execute(String.format("DROP PROFILE %s", PROFILE_2_NAME));
-      stmt.execute(String.format("DROP USER %s", USERNAME));
+      /* Cleanup fails if the tables don't exist.  */
+      boolean profile_exists = stmt.executeQuery("SELECT 1 FROM pg_class WHERE relname = 'pg_yb_profile'").next();
+
+      if (profile_exists) {
+        stmt.execute(String.format("ALTER USER %s PROFILE DETACH", USERNAME));
+        stmt.execute(String.format("DROP PROFILE IF EXISTS %s", PROFILE_1_NAME));
+        stmt.execute(String.format("DROP PROFILE IF EXISTS %s", PROFILE_2_NAME));
+        stmt.execute(String.format("DROP USER IF EXISTS %s", USERNAME));
+      }
     }
   }
 
@@ -152,6 +158,31 @@ public class TestYbRoleProfile extends BasePgSQLTest {
                                   PROFILE_2_NAME, PRF_2_FAILED_ATTEMPTS));
       stmt.execute(String.format("ALTER USER %s PROFILE ATTACH %s",
                                   USERNAME, PROFILE_1_NAME));
+    }
+  }
+
+  @Test
+  public void testProfilesOnOldDbVersion() throws Exception {
+    /*
+    * There are two operations that might result in an error if the profile catalogs don't exist:
+    *  1. logging in, because auth.c tries to get the user's profile if it exists
+    *  2. running profile commands.
+    * We can simply test this by logging in (which should behave as normal) and running a command.
+    */
+    recreateWithYsqlVersion(YsqlSnapshotVersion.EARLIEST);
+
+    try (Connection conn = getConnectionBuilder()
+        .withDatabase("template1")
+        .withTServer(0)
+        .withUser(DEFAULT_PG_USER)
+        .withPassword(DEFAULT_PG_PASS)
+        .connect();
+         Statement stmt = conn.createStatement()) {
+          /* Validate that the connection is good. This is also useful for the cleanup */
+          // stmt.execute(String.format("CREATE USER %s PASSWORD '%s'", USERNAME, PASSWORD));
+
+          runInvalidQuery(stmt, "CREATE PROFILE p LIMIT FAILED_LOGIN_ATTEMPTS 3",
+                          "Login profile system catalogs do not exist");
     }
   }
 
