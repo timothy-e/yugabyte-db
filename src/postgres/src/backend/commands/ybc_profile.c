@@ -693,8 +693,9 @@ YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
 	Form_pg_yb_role_profile rolprfform;
 	Form_pg_yb_profile 		prfform;
 	HeapTuple 				prftuple;
-	int 					failed_attempts;
 	int 					failed_attempts_limit;
+	int						current_failed_attempts;
+	int 					new_failed_attempts;
 	bool 					rolisenabled;
 
 	rolprftuple = get_role_profile_tuple(roleid);
@@ -713,16 +714,18 @@ YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
 
 	prfform = (Form_pg_yb_profile) GETSTRUCT(prftuple);
 
-	failed_attempts = DatumGetInt16(rolprfform->rolfailedloginattempts) + 1;
+	current_failed_attempts = DatumGetInt16(rolprfform->rolfailedloginattempts);
 	failed_attempts_limit = DatumGetInt16(prfform->prffailedloginattempts);
+
+	new_failed_attempts = current_failed_attempts < failed_attempts_limit
+						? current_failed_attempts + 1
+						: failed_attempts_limit + 1;
 
 	// Keep role enabled IFF role is enabled AND failed attempts < limit
 	rolisenabled = rolprfform->rolisenabled &&
-						(failed_attempts <= failed_attempts_limit);
-	if (!rolisenabled)
-		failed_attempts = failed_attempts_limit + 1;
+						(new_failed_attempts <= failed_attempts_limit);
 
-	YBCExecuteUpdateLoginAttempts(roleid, failed_attempts, rolisenabled);
+	YBCExecuteUpdateLoginAttempts(roleid, new_failed_attempts, rolisenabled);
 	CommitTransactionCommand();
 }
 
