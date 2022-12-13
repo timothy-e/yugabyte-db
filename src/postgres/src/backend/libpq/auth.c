@@ -654,8 +654,8 @@ ClientAuthentication(Port *port)
 					profileisdisabled = true;
 				}
 			}
+			ReleaseSysCache(roleTup);
 		}
-		ReleaseSysCache(roleTup);
 
 		if (status == STATUS_OK && !profileisdisabled)
 		{
