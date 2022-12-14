@@ -58,6 +58,7 @@
 #include "commands/user.h"
 #include "commands/vacuum.h"
 #include "commands/view.h"
+#include "commands/yb_profile.h"
 #include "libpq/libpq-be.h"
 #include "miscadmin.h"
 #include "parser/parse_utilcmd.h"
@@ -238,6 +239,7 @@ check_xact_readonly(Node *parsetree)
 		case T_CreateSubscriptionStmt:
 		case T_AlterSubscriptionStmt:
 		case T_DropSubscriptionStmt:
+		case T_CreateProfileStmt:
 			PreventCommandIfReadOnly(CreateCommandTag(parsetree));
 			PreventCommandIfParallelMode(CreateCommandTag(parsetree));
 			break;
@@ -566,6 +568,11 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 		case T_AlterTableSpaceOptionsStmt:
 			/* no event triggers for global objects */
 			AlterTableSpaceOptions((AlterTableSpaceOptionsStmt *) parsetree);
+			break;
+
+		case T_CreateProfileStmt:
+			PreventInTransactionBlock(isTopLevel, "CREATE PROFILE");
+			CreateProfile((CreateProfileStmt *) parsetree);
 			break;
 
 		case T_TruncateStmt:
@@ -2467,6 +2474,9 @@ CreateCommandTag(Node *parsetree)
 				case OBJECT_YBTABLEGROUP:
 					tag = "DROP TABLEGROUP";
 					break;
+				case OBJECT_YBPROFILE:
+					tag = "DROP PROFILE";
+					break;
 				default:
 					tag = "???";
 			}
@@ -2883,6 +2893,10 @@ CreateCommandTag(Node *parsetree)
 
 		case T_AlterCollationStmt:
 			tag = "ALTER COLLATION";
+			break;
+
+		case T_CreateProfileStmt:
+			tag = "CREATE PROFILE";
 			break;
 
 		case T_PrepareStmt:

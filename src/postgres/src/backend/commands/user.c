@@ -30,6 +30,7 @@
 #include "commands/dbcommands.h"
 #include "commands/seclabel.h"
 #include "commands/user.h"
+#include "commands/yb_profile.h"
 #include "libpq/crypt.h"
 #include "miscadmin.h"
 #include "storage/lmgr.h"
@@ -528,6 +529,8 @@ AlterRole(AlterRoleStmt *stmt)
 	Datum		validUntil_datum;	/* same, as timestamptz Datum */
 	bool		validUntil_null;
 	int			bypassrls = -1;
+	char       *profile = NULL;
+	int			enabled = -1;
 	DefElem    *dpassword = NULL;
 	DefElem    *dissuper = NULL;
 	DefElem    *dinherit = NULL;
@@ -539,6 +542,9 @@ AlterRole(AlterRoleStmt *stmt)
 	DefElem    *drolemembers = NULL;
 	DefElem    *dvalidUntil = NULL;
 	DefElem    *dbypassRLS = NULL;
+	DefElem    *dprofile = NULL;
+	DefElem    *ddetach = NULL;
+	DefElem    *denabled = NULL;
 	Oid			roleid;
 
 	check_rolespec_name(stmt->role,
@@ -638,6 +644,30 @@ AlterRole(AlterRoleStmt *stmt)
 						 errmsg("conflicting or redundant options")));
 			dbypassRLS = defel;
 		}
+		else if (strcmp(defel->defname, "profile") == 0)
+		{
+			if (dprofile)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			dprofile = defel;
+		}
+		else if (strcmp(defel->defname, "detach") == 0)
+		{
+			if (ddetach)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			ddetach = defel;
+		}
+		else if (strcmp(defel->defname, "enabled") == 0)
+		{
+			if (denabled)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			denabled = defel;
+		}
 		else
 			elog(ERROR, "option \"%s\" not recognized",
 				 defel->defname);
@@ -671,6 +701,10 @@ AlterRole(AlterRoleStmt *stmt)
 		validUntil = strVal(dvalidUntil->arg);
 	if (dbypassRLS)
 		bypassrls = intVal(dbypassRLS->arg);
+	if (dprofile && dprofile->arg)
+		profile = strVal(dprofile->arg);
+	if (denabled && denabled->arg)
+		enabled = intVal(denabled->arg);
 
 	/*
 	 * Scan the pg_authid relation to be certain the user exists.
@@ -711,6 +745,14 @@ AlterRole(AlterRoleStmt *stmt)
 					 errmsg("must be superuser or a member of the yb_db_admin "
 					 		"role to change bypassrls attribute")));
 	}
+	else if (profile != NULL || ddetach != NULL || denabled != NULL)
+	{
+		if (!superuser() && !IsYbDbAdminUser(GetUserId()))
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("must be superuser or a member of the yb_db_admin "
+							"role to change profile configuration")));
+	}
 	else if (!have_createrole_privilege())
 	{
 		/* We already checked issuper, isreplication, and bypassrls */
@@ -727,6 +769,27 @@ AlterRole(AlterRoleStmt *stmt)
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("permission denied")));
 	}
+
+	if (profile != NULL || ddetach != NULL || denabled != NULL)
+	{
+		if (profile != NULL)
+		{
+			CreateRoleProfile(roleid, rolename, profile);
+		}
+		else if (denabled != NULL)
+		{
+			EnableRoleProfile(roleid, rolename, enabled > 0);
+		}
+		else
+		{
+			RemoveRoleProfileForRole(roleid, rolename);
+		}
+
+		ReleaseSysCache(tuple);
+		heap_close(pg_authid_rel, NoLock);
+		return roleid;
+	}
+
 
 	/* Convert validuntil to internal form */
 	if (validUntil)

@@ -312,7 +312,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 		CreateMatViewStmt RefreshMatViewStmt CreateAmStmt
 		CreatePublicationStmt AlterPublicationStmt
 		CreateSubscriptionStmt AlterSubscriptionStmt DropSubscriptionStmt
-		BackfillIndexStmt
+		BackfillIndexStmt CreateProfileStmt
 
 %type <node>	select_no_parens select_with_parens select_clause
 				simple_select values_clause
@@ -371,7 +371,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 
 %type <str>		copy_file_name
 				database_name access_method_clause access_method attr_name
-				name cursor_name file_name
+				name cursor_name file_name prfname
 				index_name opt_index_name cluster_index_specification
 
 %type <list>	func_name handler_name qual_Op qual_all_Op subquery_Op
@@ -658,7 +658,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
  */
 
 /* ordinary key words in alphabetical order */
-%token <keyword> ABORT_P ABSOLUTE_P ACCESS ACTION ADD_P ADMIN AFTER
+%token <keyword> ABORT_P ABSOLUTE_P ACCESS ACCOUNT ACTION ADD_P ADMIN AFTER
 	AGGREGATE ALL ALSO ALTER ALWAYS ANALYSE ANALYZE AND ANY ARRAY AS ASC
 	ASSERTION ASSIGNMENT ASYMMETRIC AT ATTACH ATTRIBUTE AUTHORIZATION
 
@@ -683,8 +683,8 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 	EXCLUDE EXCLUDING EXCLUSIVE EXECUTE EXISTS EXPLAIN
 	EXTENSION EXTERNAL EXTRACT
 
-	FALSE_P FAMILY FETCH FILTER FIRST_P FLOAT_P FOLLOWING FOR
-	FORCE FOREIGN FORWARD FREEZE FROM FULL FUNCTION FUNCTIONS
+	FAILED_LOGIN_ATTEMPTS FALSE_P FAMILY FETCH FILTER FIRST_P FLOAT_P FOLLOWING
+	FOR FORCE FOREIGN FORWARD FREEZE FROM FULL FUNCTION FUNCTIONS
 
 	GENERATED GLOBAL GRANT GRANTED GREATEST GROUP_P GROUPING GROUPS
 
@@ -715,7 +715,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 
 	PARALLEL PARSER PARTIAL PARTITION PASSING PASSWORD PLACING PLANS POLICY
 	POSITION PRECEDING PRECISION PRESERVE PREPARE PREPARED PRIMARY
-	PRIOR PRIVILEGES PROCEDURAL PROCEDURE PROCEDURES PROGRAM PUBLICATION
+	PRIOR PRIVILEGES PROCEDURAL PROCEDURE PROCEDURES PROFILE PROGRAM PUBLICATION
 
 	QUOTE
 
@@ -735,8 +735,8 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 	TREAT TRIGGER TRIM TRUE_P
 	TRUNCATE TRUSTED TYPE_P TYPES_P
 
-	UNBOUNDED UNCOMMITTED UNENCRYPTED UNION UNIQUE UNKNOWN UNLISTEN UNLOGGED
-	UNTIL UPDATE USER USING
+	UNBOUNDED UNCOMMITTED UNENCRYPTED UNION UNIQUE UNKNOWN UNLISTEN UNLOCK
+	UNLOGGED UNTIL UPDATE USER USING
 
 	VACUUM VALID VALIDATE VALIDATOR VALUE_P VALUES VARCHAR VARIADIC VARYING
 	VERBOSE VERSION_P VIEW VIEWS VOLATILE
@@ -922,6 +922,7 @@ stmt :
 			| CreateOpClassStmt
 			| CreateOpFamilyStmt
 			| CreatePolicyStmt
+			| CreateProfileStmt
 			| CreateRoleStmt
 			| CreateSchemaStmt
 			| CreateStatsStmt
@@ -1061,6 +1062,9 @@ opt_with:	WITH									{}
 			| /*EMPTY*/								{}
 		;
 
+prfname:	DEFAULT						{ $$ = pstrdup("default");}
+			| name					    { $$ = $1; }
+		;
 /*
  * Options for CREATE ROLE and ALTER ROLE (also used by CREATE/ALTER USER
  * for backwards compatibility).  Note: the only option required by SQL99
@@ -1124,6 +1128,24 @@ AlterOptRoleElem:
 				{
 					$$ = makeDefElem("rolemembers", (Node *)$2, @1);
 				}
+			| PROFILE prfname
+				{
+					if (!*YBCGetGFlags()->ysql_enable_profile)
+						parser_ybc_not_support(@1, "PROFILE");
+					$$ = makeDefElem("profile", (Node *)makeString($2), @1);
+				}
+			| ACCOUNT LOCK_P
+				{
+					if (!*YBCGetGFlags()->ysql_enable_profile)
+						parser_ybc_not_support(@1, "PROFILE");
+					$$ = makeDefElem("enabled", (Node *)makeInteger(false), @1);
+				}
+			| ACCOUNT UNLOCK
+				{
+					if (!*YBCGetGFlags()->ysql_enable_profile)
+						parser_ybc_not_support(@1, "PROFILE");
+					$$ = makeDefElem("enabled", (Node *)makeInteger(true), @1);
+				}
 			| IDENT
 				{
 					/*
@@ -1151,6 +1173,10 @@ AlterOptRoleElem:
 						$$ = makeDefElem("canlogin", (Node *)makeInteger(true), @1);
 					else if (strcmp($1, "nologin") == 0)
 						$$ = makeDefElem("canlogin", (Node *)makeInteger(false), @1);
+					else if (strcmp($1, "lock") == 0)
+						$$ = makeDefElem("islocked", (Node *)makeInteger(true), @1);
+					else if (strcmp($1, "open") == 0)
+						$$ = makeDefElem("islocked", (Node *)makeInteger(false), @1);
 					else if (strcmp($1, "bypassrls") == 0)
 						$$ = makeDefElem("bypassrls", (Node *)makeInteger(true), @1);
 					else if (strcmp($1, "nobypassrls") == 0)
@@ -4820,6 +4846,24 @@ DropTableSpaceStmt: DROP TABLESPACE name
 /*****************************************************************************
  *
  *		QUERY:
+ *             CREATE PROFILE prfname LIMIT FAILED_LOGIN_ATTEMPTS <number>
+ *
+ *****************************************************************************/
+
+CreateProfileStmt: CREATE PROFILE name LIMIT FAILED_LOGIN_ATTEMPTS Iconst
+				{
+					if (!*YBCGetGFlags()->ysql_enable_profile)
+						parser_ybc_not_support(@1, "PROFILE");
+					CreateProfileStmt *n = makeNode(CreateProfileStmt);
+					n->prfname = $3;
+					n->prffailedloginattempts = makeInteger($6);
+					$$ = (Node *) n;
+				}
+		;
+
+/*****************************************************************************
+ *
+ *		QUERY:
  *             CREATE EXTENSION extension
  *             [ WITH ] [ SCHEMA schema ] [ VERSION version ] [ FROM oldversion ]
  *
@@ -6814,6 +6858,12 @@ drop_type_name:
 				{
 					parser_ybc_beta_feature(@1, "tablegroup", true);
 					$$ = OBJECT_YBTABLEGROUP;
+				}
+			| PROFILE
+				{
+					if (!*YBCGetGFlags()->ysql_enable_profile)
+						parser_ybc_not_support(@1, "PROFILE");
+					$$ = OBJECT_YBPROFILE;
 				}
 		;
 
@@ -15954,6 +16004,7 @@ unreserved_keyword:
 			  ABORT_P
 			| ABSOLUTE_P
 			| ACCESS
+			| ACCOUNT
 			| ACTION
 			| ADD_P
 			| ADMIN
@@ -16039,6 +16090,7 @@ unreserved_keyword:
 			| EXPLAIN
 			| EXTENSION
 			| EXTERNAL
+			| FAILED_LOGIN_ATTEMPTS
 			| FAMILY
 			| FILTER
 			| FIRST_P
@@ -16140,6 +16192,7 @@ unreserved_keyword:
 			| PROCEDURAL
 			| PROCEDURE
 			| PROCEDURES
+			| PROFILE
 			| PROGRAM
 			| PUBLICATION
 			| QUOTE
@@ -16226,6 +16279,7 @@ unreserved_keyword:
 			| UNENCRYPTED
 			| UNKNOWN
 			| UNLISTEN
+			| UNLOCK
 			| UNLOGGED
 			| UNTIL
 			| UPDATE
