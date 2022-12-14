@@ -543,14 +543,14 @@ YbCreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 }
 
 /*
- * SetRoleProfileStatus - set rolprfstatus to given status
+ * YbSetRoleProfileStatus - set rolprfstatus to given status
  *
  * roleid - the oid of the role
  * rolename - Name of the role. Used in the error message
  * status - status to set to
  */
 void
-SetRoleProfileStatus(Oid roleid, const char *rolename, char status)
+YbSetRoleProfileStatus(Oid roleid, const char *rolename, char status)
 {
 	Datum		new_record[Natts_pg_yb_role_profile];
 	bool		new_record_nulls[Natts_pg_yb_role_profile];
