@@ -29,9 +29,9 @@
 #include "lib/stringinfo.h"
 #include "nodes/parsenodes.h"
 
-extern Oid YbCreateProfile(CreateProfileStmt* stmt);
+extern Oid	YbCreateProfile(CreateProfileStmt* stmt);
 
-extern Oid	 get_profile_oid(const char* prfname, bool missing_ok);
+extern Oid	get_profile_oid(const char* prfname, bool missing_ok);
 extern char* get_profile_name(Oid prfid);
 
 extern void YbRemoveProfileById(Oid prfid);
