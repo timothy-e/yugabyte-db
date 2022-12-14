@@ -4858,7 +4858,15 @@ CreateProfileStmt: CREATE PROFILE name LIMIT FAILED_LOGIN_ATTEMPTS Iconst
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
 					CreateProfileStmt *n = makeNode(CreateProfileStmt);
+
 					n->prfname = $3;
+					if (strcmp(n->prfname, "default") == 0)
+						ereport(ERROR,
+								(errcode(ERRCODE_RESERVED_NAME),
+								 errmsg("profile name \"%s\" is reserved",
+										"default"),
+								 parser_errposition(@3)));
+
 					n->prffailedloginattempts = makeInteger($6);
 					$$ = (Node *) n;
 				}
