@@ -34,7 +34,7 @@ extern Oid CreateProfile(CreateProfileStmt* stmt);
 extern Oid	 get_profile_oid(const char* prfname, bool missing_ok);
 extern char* get_profile_name(Oid prfid);
 
-extern void RemoveProfileById(Oid prfid);
+extern void YbRemoveProfileById(Oid prfid);
 
 extern void CreateRoleProfile(Oid roleid, const char* rolename,
 							  const char* profile);

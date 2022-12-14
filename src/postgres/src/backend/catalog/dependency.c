@@ -1320,7 +1320,7 @@ doDeletion(const ObjectAddress *object, int flags)
 			break;
 
 		case OCLASS_YBPROFILE:
-			RemoveProfileById(object->objectId);
+			YbRemoveProfileById(object->objectId);
 			break;
 
 		case OCLASS_YBROLE_PROFILE:

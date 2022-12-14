@@ -211,14 +211,14 @@ get_profile_name(Oid prfid)
 }
 
 /*
- * RemoveProfileById - remove a profile by its OID.
+ * YbRemoveProfileById - remove a profile by its OID.
  * If a profile does not exist with the provided oid, then an error is
  * raised.
  *
  * prfid - the oid of the profile.
  */
 void
-RemoveProfileById(Oid prfid)
+YbRemoveProfileById(Oid prfid)
 {
 	Relation	 pg_profile_rel;
 	HeapScanDesc scandesc;
