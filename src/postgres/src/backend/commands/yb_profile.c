@@ -543,14 +543,14 @@ CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 }
 
 /*
- * EnableRoleProfile - set rolprfstatus based is_enabled
+ * SetRoleProfileStatus - set rolprfstatus to given status
  *
  * roleid - the oid of the role
  * rolename - Name of the role. Used in the error message
- * is_enabled - Whether the role shoule be enabled or disabled.
+ * status - status to set to
  */
 void
-EnableRoleProfile(Oid roleid, const char *rolename, bool is_enabled)
+SetRoleProfileStatus(Oid roleid, const char *rolename, char status)
 {
 	Datum		new_record[Natts_pg_yb_role_profile];
 	bool		new_record_nulls[Natts_pg_yb_role_profile];
@@ -563,10 +563,7 @@ EnableRoleProfile(Oid roleid, const char *rolename, bool is_enabled)
 	MemSet(new_record_nulls, false, sizeof(new_record_nulls));
 	MemSet(new_record_repl, false, sizeof(new_record_repl));
 
-	if (is_enabled)
-		new_record[Anum_pg_yb_role_profile_rolprfstatus - 1] = ROLPRFSTATUS_OPEN;
-	else
-		new_record[Anum_pg_yb_role_profile_rolprfstatus - 1] = ROLPRFSTATUS_LOCKED;
+	new_record[Anum_pg_yb_role_profile_rolprfstatus - 1] = status;
 	new_record_repl[Anum_pg_yb_role_profile_rolprfstatus - 1] = true;
 	new_record[Anum_pg_yb_role_profile_rolprffailedloginattempts - 1] = Int16GetDatum(0);
 	new_record_repl[Anum_pg_yb_role_profile_rolprffailedloginattempts - 1] = true;

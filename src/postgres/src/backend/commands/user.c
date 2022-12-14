@@ -39,6 +39,7 @@
 #include "utils/timestamp.h"
 #include "utils/tqual.h"
 
+#include "catalog/pg_yb_role_profile.h"
 #include "commands/yb_profile.h"
 #include "pg_yb_utils.h"
 
@@ -779,7 +780,9 @@ AlterRole(AlterRoleStmt *stmt)
 		}
 		else if (dunlocked != NULL)
 		{
-			EnableRoleProfile(roleid, rolename, unlocked > 0);
+			SetRoleProfileStatus(roleid, rolename,
+								 unlocked == 0 ? ROLPRFSTATUS_LOCKED
+											   : ROLPRFSTATUS_OPEN);
 		}
 		else
 		{
