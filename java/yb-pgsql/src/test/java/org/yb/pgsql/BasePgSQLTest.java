@@ -322,19 +322,21 @@ public class BasePgSQLTest extends BaseMiniClusterTest {
       connection = null;
     }
 
-    // Create test role.
+    connection = createTestRole();
+    pgInitialized = true;
+  }
+
+  protected Connection createTestRole() throws Exception {
     try (Connection initialConnection = getConnectionBuilder()
-        .withUser(DEFAULT_PG_USER)
-        .withPassword(DEFAULT_PG_PASS)
-        .connect();
-         Statement statement = initialConnection.createStatement()) {
+          .withUser(DEFAULT_PG_USER)
+          .connect();
+      Statement statement = initialConnection.createStatement()) {
       statement.execute(
-          String.format("CREATE ROLE %s SUPERUSER CREATEROLE CREATEDB BYPASSRLS LOGIN "
-              + "PASSWORD '%s'", TEST_PG_USER, TEST_PG_PASS));
+        String.format("CREATE ROLE %s SUPERUSER CREATEROLE CREATEDB BYPASSRLS LOGIN ",
+                      TEST_PG_USER));
     }
 
-    connection = getConnectionBuilder().withPassword(TEST_PG_PASS).connect();
-    pgInitialized = true;
+    return getConnectionBuilder().connect();
   }
 
   public void restartClusterWithFlags(

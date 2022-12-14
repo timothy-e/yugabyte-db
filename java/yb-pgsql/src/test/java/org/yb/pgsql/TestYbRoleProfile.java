@@ -53,6 +53,21 @@ public class TestYbRoleProfile extends BasePgSQLTest {
     return flagMap;
   }
 
+  @Override
+  protected Connection createTestRole() throws Exception {
+    try (Connection initialConnection = getConnectionBuilder()
+          .withUser(DEFAULT_PG_USER)
+          .withPassword(DEFAULT_PG_PASS)
+          .connect();
+      Statement statement = initialConnection.createStatement()) {
+      statement.execute(
+        String.format("CREATE ROLE %s SUPERUSER CREATEROLE CREATEDB BYPASSRLS LOGIN "
+                      + "PASSWORD '%s'", TEST_PG_USER, TEST_PG_PASS));
+    }
+
+    return getConnectionBuilder().withPassword(TEST_PG_PASS).connect();
+  }
+
   private void attemptLogin(String username, String password, String expectedError) throws Exception {
     try {
       getConnectionBuilder()
