@@ -467,13 +467,13 @@ update_role_profile(Oid roleid, const char *rolename, Datum *new_record,
 }
 
 /*
- * Create a new mapping between role and profile.
+ * YbCreateRoleProfile - create a new mapping between role and profile.
  * roleid: OID of the role
  * rolename: Name of the role. Required for error messages
  * prfname: Name of the profile.
  */
 void
-CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
+YbCreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 {
 	HeapTuple tuple;
 	Form_pg_yb_role_profile rolprfform;

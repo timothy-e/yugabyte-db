@@ -775,9 +775,7 @@ AlterRole(AlterRoleStmt *stmt)
 	if (profile != NULL || dnoprofile != NULL || dunlocked != NULL)
 	{
 		if (profile != NULL)
-		{
-			CreateRoleProfile(roleid, rolename, profile);
-		}
+			YbCreateRoleProfile(roleid, rolename, profile);
 		else if (dunlocked != NULL)
 		{
 			SetRoleProfileStatus(roleid, rolename,
