@@ -48,4 +48,5 @@ extern HeapTuple get_role_profile_tuple_by_oid(Oid rolprfid);
 
 extern void RemoveRoleProfileForRole(Oid roleid, const char* rolename);
 extern void RemoveRoleProfileById(Oid roleprfid);
+
 #endif /* PROFILE_H */
