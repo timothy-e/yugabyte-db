@@ -655,8 +655,11 @@ YBCResetFailedAttemptsIfAllowed(Oid roleid)
  * counter and disable if it exceeds limit
  *
  * roleid - the oid of the role
+ *
+ * Returns true if the role ends in a locked state.
+ * Returns false if the profile does not exist or does exist and is not locked.
  */
-void
+bool
 YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
 {
 	HeapTuple 				rolprftuple;
@@ -672,7 +675,7 @@ YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
 
 	if (!HeapTupleIsValid(rolprftuple))
 		// Role is not associated with a profile.
-		return;
+		return false;
 
 	rolprfform = (Form_pg_yb_role_profile) GETSTRUCT(rolprftuple);
 
@@ -700,6 +703,7 @@ YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
 
 	YBCExecuteUpdateLoginAttempts(roleid, new_failed_attempts, rolprfstatus);
 	CommitTransactionCommand();
+	return rolprfstatus != ROLPRFSTATUS_OPEN;
 }
 
 void

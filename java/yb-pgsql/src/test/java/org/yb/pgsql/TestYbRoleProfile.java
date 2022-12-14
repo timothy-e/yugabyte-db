@@ -41,6 +41,9 @@ public class TestYbRoleProfile extends BasePgSQLTest {
   private static final String PROFILE_2_NAME = "prf2";
   private static final int PRF_1_FAILED_ATTEMPTS = 3;
   private static final int PRF_2_FAILED_ATTEMPTS = 2;
+  private static final String AUTHENTICATION_FAILED = "FATAL: password authentication failed for user \"%s\"";
+  private static final String ROLE_IS_LOCKED_OUT = "FATAL: role \"%s\" is locked. Contact your database administrator.";
+
 
   @Override
   protected Map<String, String> getTServerFlags() {
@@ -50,7 +53,7 @@ public class TestYbRoleProfile extends BasePgSQLTest {
     return flagMap;
   }
 
-  private void attemptLogin(String username, String password) throws Exception {
+  private void attemptLogin(String username, String password, String expectedError) throws Exception {
     try {
       getConnectionBuilder()
         .withTServer(0)
@@ -58,8 +61,7 @@ public class TestYbRoleProfile extends BasePgSQLTest {
         .withPassword(password)
         .connect();
     } catch (PSQLException e) {
-      assertEquals(String.format("FATAL: password authentication failed for user \"%s\"",
-          username), e.getMessage());
+      assertEquals(String.format(expectedError, username), e.getMessage());
     }
   }
 
@@ -133,6 +135,14 @@ public class TestYbRoleProfile extends BasePgSQLTest {
     }
   }
 
+  private void exceedAttempts(int attemptLimit, String username) throws Exception {
+    /* Exceed the failed attempts limit */
+    for (int i = 0; i < attemptLimit; i++) {
+      attemptLogin(username, "wrong", AUTHENTICATION_FAILED);
+    }
+    attemptLogin(username, "wrong", ROLE_IS_LOCKED_OUT);
+  }
+
   @After
   public void cleanup() throws Exception {
     try (Statement stmt = connection.createStatement()) {
@@ -193,11 +203,7 @@ public class TestYbRoleProfile extends BasePgSQLTest {
   public void testAdminCanChangeUserProfile() throws Exception {
     assertEquals(PROFILE_1_NAME, getProfileName(USERNAME));
 
-    /* Now exceed the failed attempts limit */
-    for (int i = 0; i < PRF_1_FAILED_ATTEMPTS + 1; i++) {
-      assertProfileStateForUser(USERNAME, i, true);
-      attemptLogin(USERNAME, "wrong");
-    }
+    exceedAttempts(PRF_1_FAILED_ATTEMPTS, USERNAME);
     assertProfileStateForUser(USERNAME, PRF_1_FAILED_ATTEMPTS + 1, false);
 
     /* When the profile is removed, the user can log in again */
@@ -213,32 +219,25 @@ public class TestYbRoleProfile extends BasePgSQLTest {
     attachUserProfile(USERNAME, PROFILE_2_NAME);
     assertEquals(PROFILE_2_NAME, getProfileName(USERNAME));
 
-    /* Now exceed the failed attempts limit */
-    for (int i = 0; i < PRF_2_FAILED_ATTEMPTS + 1; i++) {
-      assertProfileStateForUser(USERNAME, i, true);
-      attemptLogin(USERNAME, "wrong");
-    }
+    exceedAttempts(PRF_2_FAILED_ATTEMPTS, USERNAME);
     assertProfileStateForUser(USERNAME, PRF_2_FAILED_ATTEMPTS + 1, false);
   }
 
   @Test
   public void testRegularUserCanFailLoginManyTimes() throws Exception {
     for (int i = 0; i < 10; i++) {
-      attemptLogin(TEST_PG_USER, "wrong");
+      attemptLogin(TEST_PG_USER, "wrong", AUTHENTICATION_FAILED);
     }
-    attemptLogin(TEST_PG_USER, TEST_PG_PASS);
+    attemptLogin(TEST_PG_USER, TEST_PG_PASS, AUTHENTICATION_FAILED);
   }
 
   @Test
   public void testAdminCanEnable() throws Exception {
-    /* Exceed the failed attempts limit */
-    for (int i = 0; i < PRF_1_FAILED_ATTEMPTS + 1; i++) {
-      attemptLogin(USERNAME, "wrong");
-    }
+    exceedAttempts(PRF_1_FAILED_ATTEMPTS, USERNAME);
     assertProfileStateForUser(USERNAME, PRF_1_FAILED_ATTEMPTS + 1, false);
 
     /* Now the user cannot login */
-    attemptLogin(USERNAME, PASSWORD);
+    attemptLogin(USERNAME, PASSWORD, ROLE_IS_LOCKED_OUT);
 
     /* After an admin resets, the user can login again */
     enableUserProfile(USERNAME);
@@ -252,7 +251,7 @@ public class TestYbRoleProfile extends BasePgSQLTest {
 
     /* With a disabled profile, the user cannot login */
     assertProfileStateForUser(USERNAME, 0, false);
-    attemptLogin(USERNAME, PASSWORD);
+    attemptLogin(USERNAME, PASSWORD, ROLE_IS_LOCKED_OUT);
 
     /* After an admin enables, the user can login again */
     enableUserProfile(USERNAME);
@@ -268,28 +267,23 @@ public class TestYbRoleProfile extends BasePgSQLTest {
 
     /* Use up all allowed failed attempts */
     for (int i = 0; i < PRF_1_FAILED_ATTEMPTS; i++) {
-      assertProfileStateForUser(USERNAME, i, true);
-      attemptLogin(USERNAME, "wrong");
+      attemptLogin(USERNAME, "wrong", AUTHENTICATION_FAILED);
+      assertProfileStateForUser(USERNAME, i + 1, true);
     }
-    assertProfileStateForUser(USERNAME, PRF_1_FAILED_ATTEMPTS, true);
 
     /* A successful login wipes the slate clean */
     login(USERNAME, PASSWORD);
     assertProfileStateForUser(USERNAME, 0, true);
 
-    /* Now exceed the failed attempts limit */
-    for (int i = 0; i < PRF_1_FAILED_ATTEMPTS + 1; i++) {
-      assertProfileStateForUser(USERNAME, i, true);
-      attemptLogin(USERNAME, "wrong");
-    }
+    exceedAttempts(PRF_1_FAILED_ATTEMPTS, USERNAME);
     assertProfileStateForUser(USERNAME, PRF_1_FAILED_ATTEMPTS + 1, false);
 
     /*
      * Now even the correct password will not let us in.
      * Failed attempts above the limit + 1 are not counted.
      */
-    attemptLogin(USERNAME, PASSWORD);
-    attemptLogin(USERNAME, "wrong");
+    attemptLogin(USERNAME, PASSWORD, ROLE_IS_LOCKED_OUT);
+    attemptLogin(USERNAME, "wrong", ROLE_IS_LOCKED_OUT);
     assertProfileStateForUser(USERNAME, PRF_1_FAILED_ATTEMPTS + 1, false);
   }
 }

@@ -54,7 +54,7 @@
  */
 static void sendAuthRequest(Port *port, AuthRequest areq, const char *extradata,
 				int extralen);
-static void auth_failed(Port *port, int status, char *logdetail);
+static void auth_failed(Port *port, int status, char *logdetail, bool lockout);
 static char *recv_password_packet(Port *port);
 
 
@@ -268,7 +268,7 @@ ClientAuthentication_hook_type ClientAuthentication_hook = NULL;
  * particular, if logdetail isn't NULL, we send that string to the log.
  */
 static void
-auth_failed(Port *port, int status, char *logdetail)
+auth_failed(Port *port, int status, char *logdetail, bool role_is_locked_out)
 {
 	const char *errstr;
 	char	   *cdetail;
@@ -351,9 +351,11 @@ auth_failed(Port *port, int status, char *logdetail)
 		logdetail = cdetail;
 
 	ereport(FATAL,
-			(errcode(errcode_return),
-			 errmsg(errstr, port->user_name),
-			 logdetail ? errdetail_log("%s", logdetail) : 0));
+		(errcode(errcode_return),
+		 role_is_locked_out
+			? errmsg("role \"%s\" is locked. Contact your database administrator.", port->user_name)
+			: errmsg(errstr, port->user_name),
+		 logdetail ? errdetail_log("%s", logdetail) : 0));
 
 	/* doesn't return */
 }
@@ -670,9 +672,9 @@ ClientAuthentication(Port *port)
 			/* Do not increment login attempts if no password was supplied */
 			if (roleid != InvalidOid && status != STATUS_EOF)
 			{
-				YBCIncFailedAttemptsAndMaybeDisableProfile(roleid);
+				profileisdisabled = YBCIncFailedAttemptsAndMaybeDisableProfile(roleid);
 			}
-			auth_failed(port, status, logdetail);
+			auth_failed(port, status, logdetail, profileisdisabled);
 		}
 		return;
 	}
@@ -680,7 +682,7 @@ ClientAuthentication(Port *port)
 	if (status == STATUS_OK)
 		sendAuthRequest(port, AUTH_REQ_OK, NULL, 0);
 	else
-		auth_failed(port, status, logdetail);
+		auth_failed(port, status, logdetail, false);
 }
 
 
