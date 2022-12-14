@@ -45,8 +45,6 @@
 #include "yb/yql/pggate/ybc_pggate.h"
 #include "executor/ybcModifyTable.h"
 
-#define DEFAULT_PROFILE_OID 8057
-
 static void
 CheckProfileCatalogsExist()
 {
@@ -228,11 +226,6 @@ RemoveProfileById(Oid prfid)
 	HeapTuple	 tuple;
 
 	CheckProfileCatalogsExist();
-
-	if (prfid == DEFAULT_PROFILE_OID)
-		ereport(ERROR,
-				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 errmsg("profile \"default\" cannot be dropped")));
 
 	pg_profile_rel = heap_open(YbProfileRelationId, RowExclusiveLock);
 
