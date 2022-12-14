@@ -13,7 +13,12 @@
 
 package org.yb.pgsql;
 
-import static org.yb.AssertionWrappers.*;
+import static org.yb.AssertionWrappers.assertEquals;
+import static org.yb.AssertionWrappers.assertFalse;
+import static org.yb.AssertionWrappers.assertLessThanOrEqualTo;
+import static org.yb.AssertionWrappers.assertNotNull;
+import static org.yb.AssertionWrappers.assertTrue;
+import static org.yb.AssertionWrappers.fail;
 
 import java.io.File;
 import java.sql.Connection;
@@ -48,10 +53,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
-import com.yugabyte.util.PGobject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.yb.client.TestUtils;
 import org.yb.minicluster.MiniYBClusterBuilder;
 import org.yb.minicluster.YsqlSnapshotVersion;
@@ -60,6 +63,7 @@ import org.yb.util.CatchingThread;
 import org.yb.util.YBTestRunnerNonTsanOnly;
 
 import com.google.common.collect.ImmutableMap;
+import com.yugabyte.util.PGobject;
 
 /**
  * For now, this test covers creation of system and shared system relations that should be created
@@ -112,6 +116,13 @@ public class TestYsqlUpgrade extends BasePgSQLTest {
 
   /** Since shared relations aren't cleared between tests, we can't reuse names. */
   private String sharedRelName;
+
+  @Override
+  protected Map<String, String> getTServerFlags() {
+    Map<String, String> flagMap = super.getTServerFlags();
+    flagMap.put("ysql_enable_profile", "true");
+    return flagMap;
+  }
 
   @Rule
   public TestName name = new TestName();
