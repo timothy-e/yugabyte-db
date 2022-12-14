@@ -388,7 +388,7 @@ get_role_profile_tuple_by_oid(Oid rolprfoid)
  * If missing_ok is false, throw an error if role profile is not found.
  * If true, just return InvalidOid.
  */
-Oid
+static Oid
 get_role_profile_oid(Oid roleid, const char *rolename, bool missing_ok)
 {
 	Oid			 result;

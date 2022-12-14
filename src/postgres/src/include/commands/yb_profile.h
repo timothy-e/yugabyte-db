@@ -42,8 +42,6 @@ extern void EnableRoleProfile(Oid roleid, const char* rolename, bool is_enabled)
 extern bool YBCMaybeIncFailedAttemptsAndDisableProfile(Oid roleid);
 extern void YBCResetFailedAttemptsIfAllowed(Oid roleid);
 
-extern Oid	 get_role_profile_oid(Oid roleid, const char* rolname,
-		bool missing_ok);
 extern HeapTuple get_role_profile_tuple_by_role_oid(Oid roleid);
 extern HeapTuple get_role_profile_tuple_by_oid(Oid rolprfid);
 
