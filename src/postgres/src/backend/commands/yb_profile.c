@@ -381,7 +381,6 @@ get_role_profile_tuple_by_oid(Oid rolprfoid)
 	return tuple;
 }
 
-
 /*
  * get_role_profile_oid - given a role oid, return the oid of the row in
  * pg_yb_role_profile for that role.
