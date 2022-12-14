@@ -1324,7 +1324,7 @@ doDeletion(const ObjectAddress *object, int flags)
 			break;
 
 		case OCLASS_YBROLE_PROFILE:
-			RemoveRoleProfileById(object->objectId);
+			YbRemoveRoleProfileById(object->objectId);
 			break;
 			/*
 			 * These global object types are not supported here.

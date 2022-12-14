@@ -674,11 +674,12 @@ YbRemoveRoleProfileForRole(Oid roleid, const char *rolename)
 }
 
 /*
- * RemoveRoleProfileById - detach a role from profile.
+ * YbRemoveRoleProfileById - detach a role from profile.
  *
  * roleprfid - the oid of the role_profile entry.
  */
-void RemoveRoleProfileById(Oid roleprfid)
+void
+YbRemoveRoleProfileById(Oid roleprfid)
 {
 	Relation	 rel;
 	HeapScanDesc scandesc;
