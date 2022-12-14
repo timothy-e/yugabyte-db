@@ -58,7 +58,6 @@
 #include "commands/user.h"
 #include "commands/vacuum.h"
 #include "commands/view.h"
-#include "commands/yb_profile.h"
 #include "libpq/libpq-be.h"
 #include "miscadmin.h"
 #include "parser/parse_utilcmd.h"
@@ -76,6 +75,7 @@
 
 #include "pg_yb_utils.h"
 #include "commands/ybccmds.h"
+#include "commands/yb_profile.h"
 
 static void YBProcessUtilityDefaultHook(PlannedStmt *pstmt,
                                         const char *queryString,

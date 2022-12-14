@@ -11649,7 +11649,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 			case OCLASS_SUBSCRIPTION:
 			case OCLASS_TRANSFORM:
 			case OCLASS_YBPROFILE:
-			case OCLASS_ROLE_YBPROFILE:
+			case OCLASS_YBROLE_PROFILE:
 
 				/*
 				 * We don't expect any of these sorts of objects to depend on

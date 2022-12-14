@@ -1,5 +1,5 @@
 --
--- YB_LOGIN_PROFILE Testsuite: Testing Statments for LOGIN PROFILES.
+-- YB_ROLE_PROFILE Testsuite: Testing statements for profiles.
 --
 --
 -- pg_catalog alterations. Validate columns of pg_yb_profile and oids.

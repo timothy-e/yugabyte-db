@@ -820,11 +820,9 @@ bool YBCExecuteUpdate(Relation rel,
 		ybctid = YBCGetYBTupleIdFromTuple(rel, tuple, inputTupleDesc);
 
 	if (ybctid == 0)
-	{
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_COLUMN), errmsg(
-					"Missing column ybctid in UPDATE request to YugaByte database")));
-	}
+					"Missing column ybctid in UPDATE request")));
 
 	YBCBindTupleId(update_stmt, ybctid);
 
@@ -1083,11 +1081,9 @@ YBCExecuteUpdateLoginAttempts(Oid roleid,
 	ybctid = YBCGetYBTupleIdFromTuple(rel, tuple, inputTupleDesc);
 
 	if (ybctid == 0)
-	{
 		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_COLUMN),
-				 errmsg("Missing column ybctid in UPDATE request to YugaByte database")));
-	}
+				(errcode(ERRCODE_UNDEFINED_COLUMN), errmsg(
+					"Missing column ybctid in UPDATE request")));
 
 	YBCBindTupleId(update_stmt, ybctid);
 
@@ -1105,7 +1101,11 @@ YBCExecuteUpdateLoginAttempts(Oid roleid,
 		else
 			continue;
 
-		YBCPgExpr ybc_expr = YBCNewConstant(update_stmt, type_id, InvalidOid, d, false);
+		YBCPgExpr ybc_expr = YBCNewConstant(update_stmt,
+											type_id,
+											InvalidOid,
+											d,
+											false);
 
 		HandleYBStatus(YBCPgDmlAssignColumn(update_stmt, attnum, ybc_expr));
 	}

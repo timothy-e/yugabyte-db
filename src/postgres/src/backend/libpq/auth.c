@@ -23,10 +23,7 @@
 #include <sys/select.h>
 #endif
 
-#include "access/htup_details.h"
-#include "catalog/pg_yb_role_profile.h"
 #include "commands/user.h"
-#include "commands/yb_profile.h"
 #include "common/ip.h"
 #include "common/md5.h"
 #include "common/scram-common.h"
@@ -41,10 +38,13 @@
 #include "storage/ipc.h"
 #include "utils/backend_random.h"
 #include "utils/builtins.h"
-#include "utils/syscache.h"
 #include "utils/timestamp.h"
 
 #include "pg_yb_utils.h"
+#include "access/htup_details.h"
+#include "catalog/pg_yb_role_profile.h"
+#include "commands/yb_profile.h"
+#include "utils/syscache.h"
 #include "yb/yql/pggate/ybc_pggate.h"
 
 
@@ -637,15 +637,15 @@ ClientAuthentication(Port *port)
 
 	if (*YBCGetGFlags()->ysql_enable_profile && YbLoginProfileCatalogsExist)
 	{
-		bool profileisdisabled = false;
-		HeapTuple roleTup, profileTuple = NULL;
+		bool profile_is_disabled = false;
+		HeapTuple roleTuple, profileTuple = NULL;
 		Oid roleid = InvalidOid;
 
 		/* Get role info from pg_authid */
-		roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
-		if (HeapTupleIsValid(roleTup))
+		roleTuple = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
+		if (HeapTupleIsValid(roleTuple))
 		{
-			roleid = HeapTupleGetOid(roleTup);
+			roleid = HeapTupleGetOid(roleTuple);
 			profileTuple = get_role_profile_tuple_by_role_oid(roleid);
 			if (HeapTupleIsValid(profileTuple))
 			{
@@ -653,13 +653,13 @@ ClientAuthentication(Port *port)
 											GETSTRUCT(profileTuple);
 				if (rolprfform->rolprfstatus != ROLPRFSTATUS_OPEN)
 				{
-					profileisdisabled = true;
+					profile_is_disabled = true;
 				}
 			}
-			ReleaseSysCache(roleTup);
+			ReleaseSysCache(roleTuple);
 		}
 
-		if (status == STATUS_OK && !profileisdisabled)
+		if (status == STATUS_OK && !profile_is_disabled)
 		{
 			if (roleid != InvalidOid)
 			{
@@ -672,9 +672,9 @@ ClientAuthentication(Port *port)
 			/* Do not increment login attempts if no password was supplied */
 			if (roleid != InvalidOid && status != STATUS_EOF)
 			{
-				profileisdisabled = YBCIncFailedAttemptsAndMaybeDisableProfile(roleid);
+				profile_is_disabled = YBCMaybeIncFailedAttemptsAndDisableProfile(roleid);
 			}
-			auth_failed(port, status, logdetail, profileisdisabled);
+			auth_failed(port, status, logdetail, profile_is_disabled);
 		}
 		return;
 	}

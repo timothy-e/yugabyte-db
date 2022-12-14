@@ -59,9 +59,6 @@
 #include "catalog/pg_ts_template.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_user_mapping.h"
-#include "catalog/pg_yb_profile.h"
-#include "catalog/pg_yb_role_profile.h"
-#include "catalog/pg_yb_tablegroup.h"
 #include "commands/comment.h"
 #include "commands/defrem.h"
 #include "commands/event_trigger.h"
@@ -75,7 +72,6 @@
 #include "commands/tablegroup.h"
 #include "commands/trigger.h"
 #include "commands/typecmds.h"
-#include "commands/yb_profile.h"
 #include "nodes/nodeFuncs.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteRemove.h"
@@ -86,7 +82,11 @@
 #include "utils/syscache.h"
 #include "utils/tqual.h"
 
+#include "catalog/pg_yb_profile.h"
+#include "catalog/pg_yb_role_profile.h"
+#include "catalog/pg_yb_tablegroup.h"
 #include "commands/ybccmds.h"
+#include "commands/yb_profile.h"
 #include "pg_yb_utils.h"
 
 /*
@@ -180,7 +180,7 @@ static const Oid object_classes[] = {
 	SubscriptionRelationId,		/* OCLASS_SUBSCRIPTION */
 	TransformRelationId,		/* OCLASS_TRANSFORM */
 	YbProfileRelationId,		/* OCLASS_YBPROFILE */
-	YbRoleProfileRelationId,	/* OCLASS_ROLE_YBPROFILE */
+	YbRoleProfileRelationId,	/* OCLASS_YBROLE_PROFILE */
 };
 
 
@@ -1323,7 +1323,7 @@ doDeletion(const ObjectAddress *object, int flags)
 			RemoveProfileById(object->objectId);
 			break;
 
-		case OCLASS_ROLE_YBPROFILE:
+		case OCLASS_YBROLE_PROFILE:
 			RemoveRoleProfileById(object->objectId);
 			break;
 			/*
@@ -2552,7 +2552,7 @@ getObjectClass(const ObjectAddress *object)
 			return OCLASS_YBPROFILE;
 
 		case YbRoleProfileRelationId:
-			return OCLASS_ROLE_YBPROFILE;
+			return OCLASS_YBROLE_PROFILE;
 
 		case YbTablegroupRelationId:
 			return OCLASS_TBLGROUP;

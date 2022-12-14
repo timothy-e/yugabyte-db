@@ -326,48 +326,6 @@ create_role_profile_map(Oid roleid, Oid prfid)
 	return roleprfid;
 }
 
-Oid
-get_role_oid_from_role_profile(Oid roleprfid)
-{
-	Relation	 rel;
-	HeapScanDesc scandesc;
-	HeapTuple	 tuple;
-	ScanKeyData	 skey[1];
-	Oid roleid;
-
-	CheckProfileCatalogsExist();
-
-	/*
-	 * Search pg_yb_role_profile.
-	 */
-	rel = heap_open(YbRoleProfileRelationId, AccessShareLock);
-
-
-	ScanKeyInit(&skey[0], ObjectIdAttributeNumber, BTEqualStrategyNumber,
-				F_OIDEQ, ObjectIdGetDatum(roleprfid));
-	scandesc = heap_beginscan_catalog(rel, 1, skey);
-	tuple = heap_getnext(scandesc, ForwardScanDirection);
-
-	if (HeapTupleIsValid(tuple))
-	{
-		Form_pg_yb_role_profile roleprfform = (Form_pg_yb_role_profile)
-			GETSTRUCT(tuple);
-
-		roleid = DatumGetObjectId(roleprfform->rolprfrole);
-	}
-	else
-		roleid = InvalidOid;
-
-	heap_endscan(scandesc);
-	heap_close(rel, AccessShareLock);
-
-	// Throw an error after ending the heap scan.
-	if (roleid == InvalidOid)
-		elog(ERROR, "could not find tuple for role profile %u", roleprfid);
-
-	return roleid;
-}
-
 HeapTuple
 get_role_profile_tuple_by_role_oid(Oid roleid)
 {
@@ -651,8 +609,9 @@ YBCResetFailedAttemptsIfAllowed(Oid roleid)
 }
 
 /*
- * YBCIncFailedAttemptsAndMaybeDisableProfile - increment failed_attempts
- * counter and disable if it exceeds limit
+ * YBCMaybeIncFailedAttemptsAndDisableProfile - increment failed_attempts
+ * counter and disable if it exceeds limit. The counter will not exceed the
+ * limit + 1.
  *
  * roleid - the oid of the role
  *
@@ -660,7 +619,7 @@ YBCResetFailedAttemptsIfAllowed(Oid roleid)
  * Returns false if the profile does not exist or does exist and is not locked.
  */
 bool
-YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
+YBCMaybeIncFailedAttemptsAndDisableProfile(Oid roleid)
 {
 	HeapTuple 				rolprftuple;
 	Form_pg_yb_role_profile rolprfform;
@@ -694,15 +653,17 @@ YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
 						? current_failed_attempts + 1
 						: failed_attempts_limit + 1;
 
-	// Keep role enabled IFF role is enabled AND failed attempts < limit
+	/* Keep role enabled IFF role is enabled AND failed attempts < limit */
 	rolprfstatus = rolprfform->rolprfstatus == ROLPRFSTATUS_OPEN &&
 						(new_failed_attempts <= failed_attempts_limit) ?
 						ROLPRFSTATUS_OPEN :
 						ROLPRFSTATUS_LOCKED;
-						;
 
-	YBCExecuteUpdateLoginAttempts(roleid, new_failed_attempts, rolprfstatus);
-	CommitTransactionCommand();
+	/* Do not write unless the values have changed */
+	if (rolprfstatus != rolprfform->rolprfstatus
+		|| new_failed_attempts != current_failed_attempts)
+		YBCExecuteUpdateLoginAttempts(roleid, new_failed_attempts, rolprfstatus);
+
 	return rolprfstatus != ROLPRFSTATUS_OPEN;
 }
 

@@ -67,7 +67,6 @@
 #include "commands/tablespace.h"
 #include "commands/tablegroup.h"
 #include "commands/trigger.h"
-#include "commands/yb_profile.h"
 #include "foreign/foreign.h"
 #include "funcapi.h"
 #include "miscadmin.h"
@@ -90,6 +89,7 @@
 #include "catalog/pg_yb_profile.h"
 #include "catalog/pg_yb_role_profile.h"
 #include "catalog/pg_yb_tablegroup.h"
+#include "commands/yb_profile.h"
 
 /*
  * ObjectProperty
@@ -3667,7 +3667,7 @@ getObjectDescription(const ObjectAddress *object)
 				appendStringInfo(&buffer, _("profile %s"), profile);
 				break;
 			}
-		case OCLASS_ROLE_YBPROFILE:
+		case OCLASS_YBROLE_PROFILE:
 			{
 				HeapTuple tup = get_role_profile_tuple_by_oid(object->objectId);
 
@@ -3677,7 +3677,7 @@ getObjectDescription(const ObjectAddress *object)
 
 				Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile) GETSTRUCT(tup);
 
-				appendStringInfo(&buffer, _("role \"%s\" is associated with profile %s"),
+				appendStringInfo(&buffer, _("association between role \"%s\" and profile %s"),
 								 GetUserNameFromId(rolprfform->rolprfrole, false),
 								 get_profile_name(rolprfform->rolprfprofile));
 				break;
@@ -4193,7 +4193,7 @@ getObjectTypeDescription(const ObjectAddress *object)
 			appendStringInfoString(&buffer, "profile");
 			break;
 
-		case OCLASS_ROLE_YBPROFILE:
+		case OCLASS_YBROLE_PROFILE:
 			appendStringInfoString(&buffer, "role profile");
 			break;
 			/*
@@ -5274,7 +5274,7 @@ getObjectIdentityParts(const ObjectAddress *object,
 									   quote_identifier(profile));
 				break;
 			}
-		case OCLASS_ROLE_YBPROFILE:
+		case OCLASS_YBROLE_PROFILE:
 			{
 				HeapTuple tup = get_role_profile_tuple_by_oid(object->objectId);
 
@@ -5284,7 +5284,7 @@ getObjectIdentityParts(const ObjectAddress *object,
 
 				Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile) GETSTRUCT(tup);
 
-				appendStringInfo(&buffer, _("role \"%s\" is associated with profile %s"),
+				appendStringInfo(&buffer, _("association between role \"%s\" and profile %s"),
 								 GetUserNameFromId(rolprfform->rolprfrole, false),
 								 get_profile_name(rolprfform->rolprfprofile));
 				break;

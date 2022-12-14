@@ -13,15 +13,8 @@
 
 package org.yb.pgsql;
 
-import static org.yb.AssertionWrappers.assertEquals;
-import static org.yb.AssertionWrappers.assertFalse;
-
-import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.Map;
-import java.util.HashMap;
-import java.util.Properties;
 
 import org.junit.After;
 import org.junit.Before;
@@ -91,7 +84,7 @@ public class TestYbProfileFlag extends BasePgSQLTest {
   }
 
   @Test(expected = PSQLException.class)
-  public void testUnlockUserIsDisable() throws Exception {
+  public void testUnlockUserIsDisabled() throws Exception {
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(String.format("ALTER USER %s ACCOUNT UNLOCK", USERNAME));
     }
