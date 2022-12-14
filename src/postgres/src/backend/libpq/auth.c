@@ -662,9 +662,7 @@ ClientAuthentication(Port *port)
 		if (status == STATUS_OK && !profile_is_disabled)
 		{
 			if (roleid != InvalidOid)
-			{
-				YBCResetFailedAttemptsIfAllowed(roleid);
-			}
+				YbResetFailedAttemptsIfAllowed(roleid);
 			sendAuthRequest(port, AUTH_REQ_OK, NULL, 0);
 		}
 		else

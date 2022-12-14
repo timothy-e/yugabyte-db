@@ -574,7 +574,7 @@ SetRoleProfileStatus(Oid roleid, const char *rolename, char status)
 }
 
 /*
- * YBCResetFailedAttemptsIfAllowed - reset failed_attempts counter
+ * YbResetFailedAttemptsIfAllowed - reset failed_attempts counter
  * This function does not check that the table exists. Since it is called
  * before the database is initialized, it expects its caller to verify that
  * the profile tables exist.
@@ -582,7 +582,7 @@ SetRoleProfileStatus(Oid roleid, const char *rolename, char status)
  * roleid - the oid of the role
  */
 void
-YBCResetFailedAttemptsIfAllowed(Oid roleid)
+YbResetFailedAttemptsIfAllowed(Oid roleid)
 {
 	HeapTuple rolprftuple;
 	Form_pg_yb_role_profile rolprfform;
