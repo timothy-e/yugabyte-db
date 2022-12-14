@@ -783,9 +783,7 @@ AlterRole(AlterRoleStmt *stmt)
 												 : ROLPRFSTATUS_OPEN);
 		}
 		else
-		{
-			RemoveRoleProfileForRole(roleid, rolename);
-		}
+			YbRemoveRoleProfileForRole(roleid, rolename);
 
 		ReleaseSysCache(tuple);
 		heap_close(pg_authid_rel, NoLock);

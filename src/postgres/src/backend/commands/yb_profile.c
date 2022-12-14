@@ -659,7 +659,7 @@ YbMaybeIncFailedAttemptsAndDisableProfile(Oid roleid)
 }
 
 void
-RemoveRoleProfileForRole(Oid roleid, const char *rolename)
+YbRemoveRoleProfileForRole(Oid roleid, const char *rolename)
 {
 	Oid roleprfoid;
 	ObjectAddress myself;
