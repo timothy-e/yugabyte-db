@@ -1,5 +1,5 @@
 --
--- YB_ROLE_LOGIN_PROFILE Testsuite: Testing Statments for ALTER USER ...PROFILE.
+-- YB_ROLE_PROFILE Testsuite: Testing statements for connecting roles and profiles.
 --
 
 --
@@ -37,19 +37,19 @@ ALTER USER restricted_user PROFILE test_profile;
 SELECT count(*) FROM pg_yb_role_profile;
 -- One row in pg_shdepend for the role profile
 SELECT count(*) FROM pg_shdepend shdep
-                    JOIN pg_yb_role_profile rpf on rpf.oid = shdep.objid
+                JOIN pg_yb_role_profile rpf on rpf.oid = shdep.objid
                 WHERE shdep.deptype = 'f';
 -- One row in pg_shdepend for the role
 SELECT count(*) FROM pg_shdepend shdep
-                    JOIN pg_roles rol on rol.oid = shdep.refobjid
+                JOIN pg_roles rol on rol.oid = shdep.refobjid
                 WHERE shdep.deptype = 'f' and rol.rolname = 'restricted_user';
 -- One row in pg_depend for the role profile
 SELECT count(*) FROM pg_depend dep
-                    JOIN pg_yb_role_profile rpf on rpf.oid = dep.objid;
+                JOIN pg_yb_role_profile rpf on rpf.oid = dep.objid;
 -- One row in pg_depend for the profile
 SELECT count(*) FROM pg_depend dep
-                    JOIN pg_yb_profile prf on prf.oid = dep.refobjid
-                    WHERE prf.prfname = 'test_profile';
+                JOIN pg_yb_profile prf on prf.oid = dep.refobjid
+                WHERE prf.prfname = 'test_profile';
 
 -- Can connect when attached to a profile
 \c yugabyte restricted_user
@@ -90,23 +90,23 @@ SELECT rolprfstatus, rolprffailedloginattempts, rolname, prfname FROM
 SELECT count(*) FROM pg_yb_role_profile;
 -- pg_shdepend for the role profile
 SELECT count(*) FROM pg_shdepend shdep
-                    JOIN pg_yb_role_profile rpf on rpf.oid = shdep.objid
+                JOIN pg_yb_role_profile rpf on rpf.oid = shdep.objid
                 WHERE shdep.deptype = 'f';
 -- pg_shdepend for the role
 SELECT count(*) FROM pg_shdepend shdep
-                    JOIN pg_roles rol on rol.oid = shdep.refobjid
+                JOIN pg_roles rol on rol.oid = shdep.refobjid
                 WHERE shdep.deptype = 'f' and rol.rolname = 'restricted_user';
 -- pg_depend for the role profile
 SELECT count(*) FROM pg_depend dep
-                    JOIN pg_yb_role_profile rpf on rpf.oid = dep.objid;
+                JOIN pg_yb_role_profile rpf on rpf.oid = dep.objid;
 -- pg_depend for the profile
 SELECT count(*) FROM pg_depend dep
-                    JOIN pg_yb_profile prf on prf.oid = dep.refobjid
-                    WHERE prf.prfname = 'test_profile';
+                JOIN pg_yb_profile prf on prf.oid = dep.refobjid
+                WHERE prf.prfname = 'test_profile';
 
 
 -- Can drop user as it is not attached to a profile. After dropping the user there should be 0 rows
 DROP USER restricted_user;
-select count(*) from pg_yb_role_profile;
+SELECT count(*) FROM pg_yb_role_profile;
 
 DROP PROFILE test_profile;

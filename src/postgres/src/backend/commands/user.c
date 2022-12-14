@@ -10,7 +10,6 @@
  *
  *-------------------------------------------------------------------------
  */
-#include <pg_yb_utils.h>
 #include "postgres.h"
 
 #include "access/genam.h"
@@ -30,7 +29,6 @@
 #include "commands/dbcommands.h"
 #include "commands/seclabel.h"
 #include "commands/user.h"
-#include "commands/yb_profile.h"
 #include "libpq/crypt.h"
 #include "miscadmin.h"
 #include "storage/lmgr.h"
@@ -40,6 +38,9 @@
 #include "utils/syscache.h"
 #include "utils/timestamp.h"
 #include "utils/tqual.h"
+
+#include <pg_yb_utils.h>
+#include "commands/yb_profile.h"
 
 /* Potentially set by pg_upgrade_support functions */
 Oid			binary_upgrade_next_pg_authid_oid = InvalidOid;
@@ -530,7 +531,7 @@ AlterRole(AlterRoleStmt *stmt)
 	bool		validUntil_null;
 	int			bypassrls = -1;
 	char       *profile = NULL;
-	int			enabled = -1;
+	int			unlocked = -1;
 	DefElem    *dpassword = NULL;
 	DefElem    *dissuper = NULL;
 	DefElem    *dinherit = NULL;
@@ -544,7 +545,7 @@ AlterRole(AlterRoleStmt *stmt)
 	DefElem    *dbypassRLS = NULL;
 	DefElem    *dprofile = NULL;
 	DefElem    *dnoprofile = NULL;
-	DefElem    *denabled = NULL;
+	DefElem    *dunlocked = NULL;
 	Oid			roleid;
 
 	check_rolespec_name(stmt->role,
@@ -660,13 +661,13 @@ AlterRole(AlterRoleStmt *stmt)
 						 errmsg("conflicting or redundant options")));
 			dnoprofile = defel;
 		}
-		else if (strcmp(defel->defname, "enabled") == 0)
+		else if (strcmp(defel->defname, "unlocked") == 0)
 		{
-			if (denabled)
+			if (dunlocked)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
-			denabled = defel;
+			dunlocked = defel;
 		}
 		else
 			elog(ERROR, "option \"%s\" not recognized",
@@ -703,8 +704,8 @@ AlterRole(AlterRoleStmt *stmt)
 		bypassrls = intVal(dbypassRLS->arg);
 	if (dprofile && dprofile->arg)
 		profile = strVal(dprofile->arg);
-	if (denabled && denabled->arg)
-		enabled = intVal(denabled->arg);
+	if (dunlocked && dunlocked->arg)
+		unlocked = intVal(dunlocked->arg);
 
 	/*
 	 * Scan the pg_authid relation to be certain the user exists.
@@ -745,7 +746,7 @@ AlterRole(AlterRoleStmt *stmt)
 					 errmsg("must be superuser or a member of the yb_db_admin "
 					 		"role to change bypassrls attribute")));
 	}
-	else if (profile != NULL || dnoprofile != NULL || denabled != NULL)
+	else if (profile != NULL || dnoprofile != NULL || dunlocked != NULL)
 	{
 		if (!superuser() && !IsYbDbAdminUser(GetUserId()))
 			ereport(ERROR,
@@ -770,15 +771,15 @@ AlterRole(AlterRoleStmt *stmt)
 					 errmsg("permission denied")));
 	}
 
-	if (profile != NULL || dnoprofile != NULL || denabled != NULL)
+	if (profile != NULL || dnoprofile != NULL || dunlocked != NULL)
 	{
 		if (profile != NULL)
 		{
 			CreateRoleProfile(roleid, rolename, profile);
 		}
-		else if (denabled != NULL)
+		else if (dunlocked != NULL)
 		{
-			EnableRoleProfile(roleid, rolename, enabled > 0);
+			EnableRoleProfile(roleid, rolename, unlocked > 0);
 		}
 		else
 		{

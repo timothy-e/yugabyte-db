@@ -1144,13 +1144,13 @@ AlterOptRoleElem:
 				{
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
-					$$ = makeDefElem("enabled", (Node *)makeInteger(false), @1);
+					$$ = makeDefElem("unlocked", (Node *)makeInteger(false), @1);
 				}
 			| ACCOUNT UNLOCK
 				{
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
-					$$ = makeDefElem("enabled", (Node *)makeInteger(true), @1);
+					$$ = makeDefElem("unlocked", (Node *)makeInteger(true), @1);
 				}
 			| IDENT
 				{

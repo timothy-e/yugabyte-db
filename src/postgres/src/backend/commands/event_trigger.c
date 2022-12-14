@@ -1202,7 +1202,7 @@ EventTriggerSupportsObjectClass(ObjectClass objclass)
 			/* no support for event triggers on tablegroups */
 			return false;
 		case OCLASS_YBPROFILE:
-		case OCLASS_ROLE_YBPROFILE:
+		case OCLASS_YBROLE_PROFILE:
 			/* no support for event triggers on profiles */
 			return false;
 		case OCLASS_CLASS:
@@ -2275,10 +2275,10 @@ stringify_grant_objtype(ObjectType objtype)
 			return "TABLEGROUP";
 		case OBJECT_TABLESPACE:
 			return "TABLESPACE";
-		case OBJECT_YBPROFILE:
-			return "PROFILE";
 		case OBJECT_TYPE:
 			return "TYPE";
+		case OBJECT_YBPROFILE:
+			return "PROFILE";
 			/* these currently aren't used */
 		case OBJECT_ACCESS_METHOD:
 		case OBJECT_AGGREGATE:

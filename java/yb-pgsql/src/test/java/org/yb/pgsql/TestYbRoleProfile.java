@@ -1,4 +1,4 @@
-// Copyright (c) YugaByte, Inc.
+// Copyright (c) Yugabyte, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.  You may obtain a copy of the License at
@@ -111,13 +111,13 @@ public class TestYbRoleProfile extends BasePgSQLTest {
     return null;
   }
 
-  private void enableUserProfile(String username) throws Exception {
+  private void unlockUserProfile(String username) throws Exception {
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(String.format("ALTER USER %s ACCOUNT UNLOCK", username));
     }
   }
 
-  private void disableUserProfile(String username) throws Exception {
+  private void lockUserProfile(String username) throws Exception {
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(String.format("ALTER USER %s ACCOUNT LOCK", username));
     }
@@ -146,7 +146,7 @@ public class TestYbRoleProfile extends BasePgSQLTest {
   @After
   public void cleanup() throws Exception {
     try (Statement stmt = connection.createStatement()) {
-      /* Cleanup fails if the tables don't exist.  */
+      /* Cleanup fails if the tables don't exist. */
       boolean profile_exists = stmt.executeQuery("SELECT 1 FROM pg_class WHERE" +
           " relname = 'pg_yb_profile'").next();
 
@@ -166,11 +166,11 @@ public class TestYbRoleProfile extends BasePgSQLTest {
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(String.format("CREATE USER %s PASSWORD '%s'", USERNAME, PASSWORD));
       stmt.execute(String.format("CREATE PROFILE %s LIMIT FAILED_LOGIN_ATTEMPTS %d",
-                                  PROFILE_1_NAME, PRF_1_FAILED_ATTEMPTS));
+                                 PROFILE_1_NAME, PRF_1_FAILED_ATTEMPTS));
       stmt.execute(String.format("CREATE PROFILE %s LIMIT FAILED_LOGIN_ATTEMPTS %d",
-                                  PROFILE_2_NAME, PRF_2_FAILED_ATTEMPTS));
+                                 PROFILE_2_NAME, PRF_2_FAILED_ATTEMPTS));
       stmt.execute(String.format("ALTER USER %s PROFILE %s",
-                                  USERNAME, PROFILE_1_NAME));
+                                 USERNAME, PROFILE_1_NAME));
     }
   }
 
@@ -211,7 +211,7 @@ public class TestYbRoleProfile extends BasePgSQLTest {
     login(USERNAME, PASSWORD);
 
     attachUserProfile(USERNAME, PROFILE_1_NAME);
-    enableUserProfile(USERNAME);
+    unlockUserProfile(USERNAME);
     assertEquals(PROFILE_1_NAME, getProfileName(USERNAME));
     login(USERNAME, PASSWORD);
 
@@ -232,7 +232,7 @@ public class TestYbRoleProfile extends BasePgSQLTest {
   }
 
   @Test
-  public void testAdminCanEnable() throws Exception {
+  public void testAdminCanUnlockAfterLockout() throws Exception {
     exceedAttempts(PRF_1_FAILED_ATTEMPTS, USERNAME);
     assertProfileStateForUser(USERNAME, PRF_1_FAILED_ATTEMPTS + 1, false);
 
@@ -240,21 +240,21 @@ public class TestYbRoleProfile extends BasePgSQLTest {
     attemptLogin(USERNAME, PASSWORD, ROLE_IS_LOCKED_OUT);
 
     /* After an admin resets, the user can login again */
-    enableUserProfile(USERNAME);
+    unlockUserProfile(USERNAME);
     assertProfileStateForUser(USERNAME, 0, true);
     login(USERNAME, PASSWORD);
   }
 
   @Test
-  public void testAdminCanDisableAndEnable() throws Exception {
-    disableUserProfile(USERNAME);
+  public void testAdminCanLockAndUnlock() throws Exception {
+    lockUserProfile(USERNAME);
 
-    /* With a disabled profile, the user cannot login */
+    /* With a locked profile, the user cannot login */
     assertProfileStateForUser(USERNAME, 0, false);
     attemptLogin(USERNAME, PASSWORD, ROLE_IS_LOCKED_OUT);
 
-    /* After an admin enables, the user can login again */
-    enableUserProfile(USERNAME);
+    /* After an admin unlocks, the user can login again */
+    unlockUserProfile(USERNAME);
     assertProfileStateForUser(USERNAME, 0, true);
     login(USERNAME, PASSWORD);
   }

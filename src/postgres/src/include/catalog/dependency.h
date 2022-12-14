@@ -129,8 +129,8 @@ typedef enum DependencyType
  * this: they are protected by the existence of a physical file in the
  * tablespace.)
  *
- * (d) a SHARED_DEPENDENCY_PROFILE entry means that the referenced object is
- * a role is mentioned in a pg_yb_role_profile row.
+ * (f) a SHARED_DEPENDENCY_PROFILE entry means that the referenced object is
+ * a role that is mentioned in a pg_yb_role_profile row.
  * The referenced object must be a pg_authid entry.
  *
  * SHARED_DEPENDENCY_INVALID is a value used as a parameter in internal
@@ -196,10 +196,10 @@ typedef enum ObjectClass
 	OCLASS_SUBSCRIPTION,		/* pg_subscription */
 	OCLASS_TRANSFORM,			/* pg_transform */
 	OCLASS_YBPROFILE,				/* pg_yb_profile */
-	OCLASS_ROLE_YBPROFILE,		/* pg_yb_role_profile */
+	OCLASS_YBROLE_PROFILE,		/* pg_yb_role_profile */
 } ObjectClass;
 
-#define LAST_OCLASS		OCLASS_ROLE_YBPROFILE
+#define LAST_OCLASS		OCLASS_YBROLE_PROFILE
 
 /* flag bits for performDeletion/performMultipleDeletions: */
 #define PERFORM_DELETION_INTERNAL			0x0001	/* internal action */

@@ -1,3 +1,7 @@
+--
+-- YB_ROLE_PROFILE Testsuite: Testing ownership and access for profiles.
+--
+
 CREATE USER user_1;
 CREATE USER user_2 SUPERUSER;
 CREATE USER user_3;
@@ -36,7 +40,7 @@ DROP PROFILE existing_profile;
 \c yugabyte yugabyte
 CREATE PROFILE existing_profile LIMIT FAILED_LOGIN_ATTEMPTS 3;
 
--- user_3 can execute these commands as it is a yb_super_admin.
+-- user_3 can execute these commands as it is a yb_db_admin.
 
 \c yugabyte user_3
 CREATE PROFILE test_profile_3 LIMIT FAILED_LOGIN_ATTEMPTS 3;
