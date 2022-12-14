@@ -39,7 +39,7 @@ extern void RemoveProfileById(Oid prfid);
 extern void CreateRoleProfile(Oid roleid, const char* rolename,
 							  const char* profile);
 extern void SetRoleProfileStatus(Oid roleid, const char* rolename, char status);
-extern bool YBCMaybeIncFailedAttemptsAndDisableProfile(Oid roleid);
+extern bool YbMaybeIncFailedAttemptsAndDisableProfile(Oid roleid);
 extern void YbResetFailedAttemptsIfAllowed(Oid roleid);
 
 extern HeapTuple get_role_profile_tuple_by_role_oid(Oid roleid);

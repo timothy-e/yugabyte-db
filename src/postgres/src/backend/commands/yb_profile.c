@@ -600,7 +600,7 @@ YbResetFailedAttemptsIfAllowed(Oid roleid)
 }
 
 /*
- * YBCMaybeIncFailedAttemptsAndDisableProfile - increment failed_attempts
+ * YbMaybeIncFailedAttemptsAndDisableProfile - increment failed_attempts
  * counter and disable if it exceeds limit. The counter will not exceed the
  * limit + 1.
  *
@@ -610,7 +610,7 @@ YbResetFailedAttemptsIfAllowed(Oid roleid)
  * Returns false if the profile does not exist or does exist and is not locked.
  */
 bool
-YBCMaybeIncFailedAttemptsAndDisableProfile(Oid roleid)
+YbMaybeIncFailedAttemptsAndDisableProfile(Oid roleid)
 {
 	HeapTuple 				rolprftuple;
 	Form_pg_yb_role_profile rolprfform;

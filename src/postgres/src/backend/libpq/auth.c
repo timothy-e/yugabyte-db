@@ -669,9 +669,7 @@ ClientAuthentication(Port *port)
 		{
 			/* Do not increment login attempts if no password was supplied */
 			if (roleid != InvalidOid && status != STATUS_EOF)
-			{
-				profile_is_disabled = YBCMaybeIncFailedAttemptsAndDisableProfile(roleid);
-			}
+				profile_is_disabled = YbMaybeIncFailedAttemptsAndDisableProfile(roleid);
 			auth_failed(port, status, logdetail, profile_is_disabled);
 		}
 		return;
