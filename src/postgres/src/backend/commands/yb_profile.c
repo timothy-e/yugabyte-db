@@ -100,7 +100,7 @@ CreateProfile(CreateProfileStmt *stmt)
 		DirectFunctionCall1(namein, CStringGetDatum(stmt->prfname));
 	values[Anum_pg_yb_profile_prfmaxfailedloginattempts - 1] =
 		intVal(stmt->prffailedloginattempts);
-	// Lock time to 0 as it is not implemented yet.
+	/* Set lock time to 0 as it is not implemented yet. */
 	values[Anum_pg_yb_profile_prfpasswordlocktime - 1] = 0;
 
 	tuple = heap_form_tuple(rel->rd_att, values, nulls);
