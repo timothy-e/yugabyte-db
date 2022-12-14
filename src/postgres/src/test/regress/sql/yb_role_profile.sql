@@ -113,7 +113,7 @@ DROP USER restricted_user;
 
 
 -- DROP OWNED BY is required to drop role/user. After dropping the user there should be 0 rows
-DROP OWNED BY restricted_user;
+ALTER USER restricted_user NOPROFILE;
 DROP USER restricted_user;
 select count(*) from pg_yb_role_profile;
 
@@ -125,7 +125,7 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
     JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
 
 -- After dropping the user there should be 0 rows
-DROP OWNED BY drop_user;
+ALTER USER drop_user NOPROFILE;
 DROP USER drop_user;
 select count(*) from pg_yb_role_profile;
 

@@ -706,7 +706,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 	MAPPING MATCH MATERIALIZED MAXVALUE METHOD MINUTE_P MINVALUE MODE MONTH_P MOVE
 
 	NAME_P NAMES NATIONAL NATURAL NCHAR NEW NEXT NO NONCONCURRENTLY NONE
-	NOT NOTHING NOTIFY NOTNULL NOWAIT NULL_P NULLIF
+	NOPROFILE NOT NOTHING NOTIFY NOTNULL NOWAIT NULL_P NULLIF
 	NULLS_P NUMERIC
 
 	OBJECT_P OF OFF OFFSET OIDS OLD ON ONLY OPERATOR OPTION OPTIONS OR
@@ -1133,6 +1133,12 @@ AlterOptRoleElem:
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
 					$$ = makeDefElem("profile", (Node *)makeString($2), @1);
+				}
+ 			| NOPROFILE
+				{
+					if (!*YBCGetGFlags()->ysql_enable_profile)
+						parser_ybc_not_support(@1, "PROFILE");
+					$$ = makeDefElem("noprofile", (Node *)makeInteger(false), @1);
 				}
 			| ACCOUNT LOCK_P
 				{
@@ -16157,6 +16163,7 @@ unreserved_keyword:
 			| NEW
 			| NEXT
 			| NO
+			| NOPROFILE
 			| NOTHING
 			| NOTIFY
 			| NOWAIT

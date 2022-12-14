@@ -14,6 +14,7 @@ CREATE PROFILE test_profile_1 LIMIT FAILED_LOGIN_ATTEMPTS 3;
 ALTER USER restricted_user PROFILE test_profile_1;
 ALTER USER restricted_user ACCOUNT LOCK;
 ALTER USER restricted_user ACCOUNT UNLOCK;
+ALTER USER restricted_user NOPROFILE;
 DROP PROFILE existing_profile;
 
 -- user_2 can execute these commands as it is a super user.
@@ -27,11 +28,7 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
 ALTER USER restricted_user ACCOUNT LOCK;
 ALTER USER restricted_user ACCOUNT UNLOCK;
 
-ALTER USER restricted_user PROFILE default;
-SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
-    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
-    JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
-
+ALTER USER restricted_user NOPROFILE;
 DROP PROFILE test_profile_2;
 DROP PROFILE existing_profile;
 
@@ -51,16 +48,12 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
 ALTER USER restricted_user ACCOUNT LOCK;
 ALTER USER restricted_user ACCOUNT UNLOCK;
 
-ALTER USER restricted_user PROFILE default;
-SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
-    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
-    JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
+ALTER USER restricted_user NOPROFILE;
 
 DROP PROFILE test_profile_3;
 DROP PROFILE existing_profile;
 
 \c yugabyte yugabyte
-DROP OWNED BY restricted_user;
 DROP USER restricted_user;
 DROP USER user_1;
 DROP USER user_2;

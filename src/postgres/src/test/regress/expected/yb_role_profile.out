@@ -140,7 +140,7 @@ WARNING:  role "restricted_user" is already associated with profile "test_profil
 -- fail: Cannot drop a profile that has a role associated with it
 DROP PROFILE test_profile;
 ERROR:  cannot drop profile test_profile because other objects depend on it
-DETAIL:  role restricted_user depends on profile test_profile
+DETAIL:  role "restricted_user" is associated with profile test_profile depends on profile test_profile
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
 -- Remove the association of a role by attaching to the default profile
 ALTER USER restricted_user PROFILE default;
@@ -206,9 +206,9 @@ ERROR:  profile "non_existent" does not exist
 -- A role/user cannot be dropped because there is mapping to profile.
 DROP USER restricted_user;
 ERROR:  role "restricted_user" cannot be dropped because some objects depend on it
-DETAIL:  role restricted_user
+DETAIL:  role "restricted_user" is associated with profile default
 -- DROP OWNED BY is required to drop role/user. After dropping the user there should be 0 rows
-DROP OWNED BY restricted_user;
+ALTER USER restricted_user NOPROFILE;
 DROP USER restricted_user;
 select count(*) from pg_yb_role_profile;
  count
@@ -228,7 +228,7 @@ SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
 (1 row)
 
 -- After dropping the user there should be 0 rows
-DROP OWNED BY drop_user;
+ALTER USER drop_user NOPROFILE;
 DROP USER drop_user;
 select count(*) from pg_yb_role_profile;
  count

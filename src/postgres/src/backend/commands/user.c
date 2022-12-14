@@ -543,7 +543,7 @@ AlterRole(AlterRoleStmt *stmt)
 	DefElem    *dvalidUntil = NULL;
 	DefElem    *dbypassRLS = NULL;
 	DefElem    *dprofile = NULL;
-	DefElem    *ddetach = NULL;
+	DefElem    *dnoprofile = NULL;
 	DefElem    *denabled = NULL;
 	Oid			roleid;
 
@@ -652,13 +652,13 @@ AlterRole(AlterRoleStmt *stmt)
 						 errmsg("conflicting or redundant options")));
 			dprofile = defel;
 		}
-		else if (strcmp(defel->defname, "detach") == 0)
+		else if (strcmp(defel->defname, "noprofile") == 0)
 		{
-			if (ddetach)
+			if (dnoprofile)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
-			ddetach = defel;
+			dnoprofile = defel;
 		}
 		else if (strcmp(defel->defname, "enabled") == 0)
 		{
@@ -745,7 +745,7 @@ AlterRole(AlterRoleStmt *stmt)
 					 errmsg("must be superuser or a member of the yb_db_admin "
 					 		"role to change bypassrls attribute")));
 	}
-	else if (profile != NULL || ddetach != NULL || denabled != NULL)
+	else if (profile != NULL || dnoprofile != NULL || denabled != NULL)
 	{
 		if (!superuser() && !IsYbDbAdminUser(GetUserId()))
 			ereport(ERROR,
@@ -770,7 +770,7 @@ AlterRole(AlterRoleStmt *stmt)
 					 errmsg("permission denied")));
 	}
 
-	if (profile != NULL || ddetach != NULL || denabled != NULL)
+	if (profile != NULL || dnoprofile != NULL || denabled != NULL)
 	{
 		if (profile != NULL)
 		{

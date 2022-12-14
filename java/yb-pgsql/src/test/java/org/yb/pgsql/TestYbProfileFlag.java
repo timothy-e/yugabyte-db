@@ -44,7 +44,6 @@ public class TestYbProfileFlag extends BasePgSQLTest {
   @After
   public void cleanup() throws Exception {
     try (Statement stmt = connection.createStatement()) {
-      stmt.execute(String.format("DROP OWNED BY %s", USERNAME));
       stmt.execute(String.format("DROP USER %s", USERNAME));
     }
   }
@@ -81,6 +80,13 @@ public class TestYbProfileFlag extends BasePgSQLTest {
   public void testAttachProfileIsDisabled() throws Exception {
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(String.format("ALTER USER %s PROFILE %s", USERNAME, PROFILE_1_NAME));
+    }
+  }
+
+  @Test(expected = PSQLException.class)
+  public void testDetachProfileIsDisabled() throws Exception {
+    try (Statement stmt = connection.createStatement()) {
+      stmt.execute(String.format("ALTER USER %s NOPROFILE", USERNAME));
     }
   }
 

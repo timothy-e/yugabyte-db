@@ -123,7 +123,7 @@ public class TestYbRoleProfile extends BasePgSQLTest {
 
   private void detachUserProfile(String username) throws Exception {
     try (Statement stmt = connection.createStatement()) {
-      stmt.execute(String.format("ALTER USER %s PROFILE default", username));
+      stmt.execute(String.format("ALTER USER %s NOPROFILE", username));
     }
   }
 
@@ -141,10 +141,11 @@ public class TestYbRoleProfile extends BasePgSQLTest {
           " relname = 'pg_yb_profile'").next();
 
       if (profile_exists) {
-        stmt.execute(String.format("ALTER USER %s PROFILE default", USERNAME));
+        if (getProfileName(USERNAME) != null) {
+          stmt.execute(String.format("ALTER USER %s NOPROFILE", USERNAME));
+        }
         stmt.execute(String.format("DROP PROFILE IF EXISTS %s", PROFILE_1_NAME));
         stmt.execute(String.format("DROP PROFILE IF EXISTS %s", PROFILE_2_NAME));
-        stmt.execute(String.format("DROP OWNED BY %s", USERNAME));
         stmt.execute(String.format("DROP USER IF EXISTS %s", USERNAME));
       }
     }
@@ -201,8 +202,11 @@ public class TestYbRoleProfile extends BasePgSQLTest {
 
     /* When the profile is removed, the user can log in again */
     detachUserProfile(USERNAME);
+    login(USERNAME, PASSWORD);
+
+    attachUserProfile(USERNAME, PROFILE_1_NAME);
     enableUserProfile(USERNAME);
-    assertEquals("default", getProfileName(USERNAME));
+    assertEquals(PROFILE_1_NAME, getProfileName(USERNAME));
     login(USERNAME, PASSWORD);
 
     /* Then, if we change the profile, the user has only that many failed attempts */
