@@ -62,7 +62,7 @@ CheckProfileCatalogsExist()
  * Create a profile.
  */
 Oid
-CreateProfile(CreateProfileStmt *stmt)
+YbCreateProfile(CreateProfileStmt *stmt)
 {
 	Relation  rel;
 	Datum	  values[Natts_pg_yb_profile];

@@ -572,7 +572,7 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 
 		case T_CreateProfileStmt:
 			PreventInTransactionBlock(isTopLevel, "CREATE PROFILE");
-			CreateProfile((CreateProfileStmt *) parsetree);
+			YbCreateProfile((CreateProfileStmt *) parsetree);
 			break;
 
 		case T_TruncateStmt:
