@@ -790,7 +790,6 @@ AlterRole(AlterRoleStmt *stmt)
 		return roleid;
 	}
 
-
 	/* Convert validuntil to internal form */
 	if (validUntil)
 	{

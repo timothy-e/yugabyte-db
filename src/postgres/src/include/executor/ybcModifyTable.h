@@ -177,7 +177,7 @@ extern bool YBCExecuteUpdate(Relation rel,
  */
 extern bool YBCExecuteUpdateLoginAttempts(Oid roleid,
 										  int failed_attempts,
-										  bool rolisenabled);
+										  char rolprfstatus);
 
 /*
  * Replace a row in a YugaByte table by first deleting an existing row

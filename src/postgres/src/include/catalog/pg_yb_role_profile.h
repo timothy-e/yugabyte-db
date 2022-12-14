@@ -27,11 +27,13 @@
  */
 CATALOG(pg_yb_role_profile,8054,YbRoleProfileRelationId) BKI_SHARED_RELATION BKI_ROWTYPE_OID(8056,YbRoleProfileRelation_Rowtype_Id) BKI_SCHEMA_MACRO
 {
-	Oid			rolid;		/* OID of the role */
-	Oid			prfid;		/* OID of the profile */
-	bool		rolisenabled;	/* Is the Role enabled? */
-	int32		rolfailedloginattempts;  /* Number of failed attempts */
-	int32    	rollockedat;  /* Timestamp at which role was locked */
+	Oid				rolprfrole;		/* OID of the role */
+	Oid				rolprfprofile;	/* OID of the profile */
+	char			rolprfstatus;	/* Refer ROLSTATUS_ categories below */
+	int32			rolprffailedloginattempts;  /* Number of failed attempts */
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
+	timestamptz		rolprflockeduntil;	/* lock timeout expiration time, if any */
+#endif
 } FormData_pg_yb_role_profile;
 
 /* ----------------
@@ -40,5 +42,13 @@ CATALOG(pg_yb_role_profile,8054,YbRoleProfileRelationId) BKI_SHARED_RELATION BKI
  * ----------------
  */
 typedef FormData_pg_yb_role_profile *Form_pg_yb_role_profile;
+
+/*
+ * Symbolic values for rolprfstatus
+ */
+
+#define ROLPRFSTATUS_OPEN 'o'	/* OPEN. Role is unlocked and can login */
+#define ROLPRFSTATUS_LOCKED 'l'	/* LOCKED. Role is locked and cannot login */
+#define ROLPRFSTATUS_LOCK_TIMED 't' /* LOCKED(TIMED). Role is locked until  a specific time */
 
 #endif							/* PG_YB_ROLE_PROFILE_H */

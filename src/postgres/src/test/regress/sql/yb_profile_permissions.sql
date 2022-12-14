@@ -21,9 +21,9 @@ DROP PROFILE existing_profile;
 \c yugabyte user_2
 CREATE PROFILE test_profile_2 LIMIT FAILED_LOGIN_ATTEMPTS 3;
 ALTER USER restricted_user PROFILE test_profile_2;
-SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
-    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
-    JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
+SELECT rolprfstatus, rolprffailedloginattempts, rolname, prfname FROM
+    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolprfrole = rol.oid
+    JOIN pg_catalog.pg_yb_profile lp ON rp.rolprfprofile = lp.oid;
 
 ALTER USER restricted_user ACCOUNT LOCK;
 ALTER USER restricted_user ACCOUNT UNLOCK;
@@ -41,9 +41,9 @@ CREATE PROFILE existing_profile LIMIT FAILED_LOGIN_ATTEMPTS 3;
 \c yugabyte user_3
 CREATE PROFILE test_profile_3 LIMIT FAILED_LOGIN_ATTEMPTS 3;
 ALTER USER restricted_user PROFILE test_profile_3;
-SELECT rolisenabled, rolfailedloginattempts, rolname, prfname FROM
-    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolid = rol.oid
-    JOIN pg_catalog.pg_yb_profile lp ON rp.prfid = lp.oid;
+SELECT rolprfstatus, rolprffailedloginattempts, rolname, prfname FROM
+    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolprfrole = rol.oid
+    JOIN pg_catalog.pg_yb_profile lp ON rp.rolprfprofile = lp.oid;
 
 ALTER USER restricted_user ACCOUNT LOCK;
 ALTER USER restricted_user ACCOUNT UNLOCK;

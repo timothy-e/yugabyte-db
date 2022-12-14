@@ -1057,7 +1057,7 @@ bool YBCExecuteUpdate(Relation rel,
 bool
 YBCExecuteUpdateLoginAttempts(Oid roleid,
 							  int failed_attempts,
-							  bool is_enabled)
+							  char rolprfstatus)
 {
 	YBCPgStatement	update_stmt = NULL;
 	Datum			ybctid;
@@ -1098,10 +1098,10 @@ YBCExecuteUpdateLoginAttempts(Oid roleid,
 		int32_t 				type_id = att_desc->atttypid;
 		Datum 					d;
 
-		if (attnum == Anum_pg_yb_role_profile_rolfailedloginattempts)
+		if (attnum == Anum_pg_yb_role_profile_rolprffailedloginattempts)
 			d = Int16GetDatum(failed_attempts);
-		else if (attnum == Anum_pg_yb_role_profile_rolisenabled)
-			d = BoolGetDatum(is_enabled);
+		else if (attnum == Anum_pg_yb_role_profile_rolprfstatus)
+			d = CharGetDatum(rolprfstatus);
 		else
 			continue;
 

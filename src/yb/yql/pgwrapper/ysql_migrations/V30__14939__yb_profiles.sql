@@ -25,11 +25,3 @@ BEGIN;
     row_type_oid = 8056
   ) TABLESPACE pg_global;
 COMMIT;
-
-BEGIN;
-  SET LOCAL yb_non_ddl_txn_for_sys_tables_allowed TO true;
-
-  INSERT INTO pg_yb_profile (oid, prfname, prffailedloginattempts, prfpasswordlocktime)
-  VALUES (8057, 'default', 0, 0)
-  ON CONFLICT DO NOTHING;
-COMMIT;

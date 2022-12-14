@@ -78,16 +78,16 @@ public class TestYbRoleProfile extends BasePgSQLTest {
       boolean expectedEnabled) throws Exception {
     try (Statement stmt = connection.createStatement()) {
       ResultSet result = stmt.executeQuery(
-          String.format("SELECT rolisenabled, rolfailedloginattempts " +
+          String.format("SELECT rolprfstatus, rolprffailedloginattempts " +
               "FROM pg_yb_role_profile rp " +
-              "JOIN pg_roles rol ON rp.rolid = rol.oid " +
+              "JOIN pg_roles rol ON rp.rolprfrole = rol.oid " +
               "WHERE rol.rolname = '%s'",
               username));
       while (result.next()) {
         assertEquals(expectedFailedLogins, Integer.parseInt(
-            result.getString("rolfailedloginattempts")));
+            result.getString("rolprffailedloginattempts")));
         assertEquals(expectedEnabled,
-            result.getString("rolisenabled").equals("t"));
+            result.getString("rolprfstatus").equals("o"));
         assertFalse(result.next());
       }
     }
@@ -98,8 +98,8 @@ public class TestYbRoleProfile extends BasePgSQLTest {
       ResultSet result = stmt.executeQuery(String.format(
           "SELECT prfname " +
               "FROM pg_yb_role_profile rp " +
-              "JOIN pg_roles rol ON rp.rolid = rol.oid " +
-              "JOIN pg_yb_profile lp ON rp.prfid = lp.oid " +
+              "JOIN pg_roles rol ON rp.rolprfrole = rol.oid " +
+              "JOIN pg_yb_profile lp ON rp.rolprfprofile = lp.oid " +
               "WHERE rol.rolname = '%s'",
           username));
       while (result.next()) {

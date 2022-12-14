@@ -28,7 +28,7 @@
 CATALOG(pg_yb_profile,8051,YbProfileRelationId) BKI_SHARED_RELATION BKI_ROWTYPE_OID(8053,YbProfileRelation_Rowtype_Id) BKI_SCHEMA_MACRO
 {
 	NameData	prfname;		/* profile name */
-	int32		prffailedloginattempts;		/* no. of attempts allowed */
+	int32		prfmaxfailedloginattempts;		/* no. of attempts allowed */
 	int32		prfpasswordlocktime;  /* secs to lock out an account */
 } FormData_pg_yb_profile;
 

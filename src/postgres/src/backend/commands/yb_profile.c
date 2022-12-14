@@ -98,7 +98,7 @@ CreateProfile(CreateProfileStmt *stmt)
 
 	values[Anum_pg_yb_profile_prfname - 1] =
 		DirectFunctionCall1(namein, CStringGetDatum(stmt->prfname));
-	values[Anum_pg_yb_profile_prffailedloginattempts - 1] =
+	values[Anum_pg_yb_profile_prfmaxfailedloginattempts - 1] =
 		intVal(stmt->prffailedloginattempts);
 	// Lock time to 0 as it is not implemented yet.
 	values[Anum_pg_yb_profile_prfpasswordlocktime - 1] = 0;
@@ -289,11 +289,12 @@ create_role_profile_map(Oid roleid, Oid prfid)
 
 	MemSet(nulls, false, sizeof(nulls));
 
-	values[Anum_pg_yb_role_profile_rolid - 1] = roleid;
-	values[Anum_pg_yb_role_profile_prfid - 1] = prfid;
-	values[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = 0;
-	values[Anum_pg_yb_role_profile_rollockedat - 1] = 0;
-	values[Anum_pg_yb_role_profile_rolisenabled - 1] = true;
+	values[Anum_pg_yb_role_profile_rolprfrole - 1] = roleid;
+	values[Anum_pg_yb_role_profile_rolprfprofile - 1] = prfid;
+	values[Anum_pg_yb_role_profile_rolprffailedloginattempts - 1] = 0;
+	values[Anum_pg_yb_role_profile_rolprfstatus - 1] = ROLPRFSTATUS_OPEN;
+
+	nulls[Anum_pg_yb_role_profile_rolprflockeduntil - 1] = true;
 
 	tuple = heap_form_tuple(rel->rd_att, values, nulls);
 
@@ -352,7 +353,7 @@ get_role_oid_from_role_profile(Oid roleprfid)
 		Form_pg_yb_role_profile roleprfform = (Form_pg_yb_role_profile)
 			GETSTRUCT(tuple);
 
-		roleid = DatumGetObjectId(roleprfform->rolid);
+		roleid = DatumGetObjectId(roleprfform->rolprfrole);
 	}
 	else
 		roleid = InvalidOid;
@@ -382,7 +383,7 @@ get_role_profile_tuple_by_role_oid(Oid roleid)
 	 */
 	rel = heap_open(YbRoleProfileRelationId, AccessShareLock);
 
-	ScanKeyInit(&entry[0], Anum_pg_yb_role_profile_rolid,
+	ScanKeyInit(&entry[0], Anum_pg_yb_role_profile_rolprfrole,
 				BTEqualStrategyNumber, F_OIDEQ, roleid);
 	scandesc = heap_beginscan_catalog(rel, 1, entry);
 	tuple = heap_getnext(scandesc, ForwardScanDirection);
@@ -556,7 +557,7 @@ CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 
 	rolprfid = HeapTupleGetOid(tuple);
 	rolprfform = (Form_pg_yb_role_profile) GETSTRUCT(tuple);
-	currentprfid = rolprfform->prfid;
+	currentprfid = rolprfform->rolprfprofile;
 
 	// Check if the role is already mapped to the same profile.
 	if (currentprfid == prfid)
@@ -576,8 +577,8 @@ CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 	MemSet(new_record_nulls, false, sizeof(new_record_nulls));
 	MemSet(new_record_repl, false, sizeof(new_record_repl));
 
-	new_record[Anum_pg_yb_role_profile_prfid - 1] = prfid;
-	new_record_repl[Anum_pg_yb_role_profile_prfid - 1] = true;
+	new_record[Anum_pg_yb_role_profile_rolprfprofile - 1] = prfid;
+	new_record_repl[Anum_pg_yb_role_profile_rolprfprofile - 1] = true;
 
 	update_role_profile(roleid, rolename, new_record,
 						new_record_nulls,
@@ -590,11 +591,11 @@ CreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 }
 
 /*
- * EnableRoleProfile - set rolisenabled flag
+ * EnableRoleProfile - set rolprfstatus based is_enabled
  *
  * roleid - the oid of the role
  * rolename - Name of the role. Used in the error message
- * is_enabled - bool value
+ * is_enabled - Whether the role shoule be enabled or disabled.
  */
 void
 EnableRoleProfile(Oid roleid, const char *rolename, bool is_enabled)
@@ -610,10 +611,13 @@ EnableRoleProfile(Oid roleid, const char *rolename, bool is_enabled)
 	MemSet(new_record_nulls, false, sizeof(new_record_nulls));
 	MemSet(new_record_repl, false, sizeof(new_record_repl));
 
-	new_record[Anum_pg_yb_role_profile_rolisenabled - 1] = BoolGetDatum(is_enabled);
-	new_record_repl[Anum_pg_yb_role_profile_rolisenabled - 1] = true;
-	new_record[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = Int16GetDatum(0);
-	new_record_repl[Anum_pg_yb_role_profile_rolfailedloginattempts - 1] = true;
+	if (is_enabled)
+		new_record[Anum_pg_yb_role_profile_rolprfstatus - 1] = ROLPRFSTATUS_OPEN;
+	else
+		new_record[Anum_pg_yb_role_profile_rolprfstatus - 1] = ROLPRFSTATUS_LOCKED;
+	new_record_repl[Anum_pg_yb_role_profile_rolprfstatus - 1] = true;
+	new_record[Anum_pg_yb_role_profile_rolprffailedloginattempts - 1] = Int16GetDatum(0);
+	new_record_repl[Anum_pg_yb_role_profile_rolprffailedloginattempts - 1] = true;
 
 	update_role_profile(roleid, rolename, new_record, new_record_nulls,
 			new_record_repl, false);
@@ -642,8 +646,8 @@ YBCResetFailedAttemptsIfAllowed(Oid roleid)
 
 	rolprfform = (Form_pg_yb_role_profile) GETSTRUCT(rolprftuple);
 
-	if (rolprfform->rolisenabled && rolprfform->rolfailedloginattempts > 0)
-		YBCExecuteUpdateLoginAttempts(roleid, 0, true);
+	if (rolprfform->rolprfstatus == ROLPRFSTATUS_OPEN && rolprfform->rolprffailedloginattempts > 0)
+		YBCExecuteUpdateLoginAttempts(roleid, 0, ROLPRFSTATUS_OPEN);
 }
 
 /*
@@ -662,7 +666,7 @@ YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
 	int 					failed_attempts_limit;
 	int						current_failed_attempts;
 	int 					new_failed_attempts;
-	bool 					rolisenabled;
+	char 					rolprfstatus;
 
 	rolprftuple = get_role_profile_tuple_by_role_oid(roleid);
 
@@ -672,7 +676,7 @@ YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
 
 	rolprfform = (Form_pg_yb_role_profile) GETSTRUCT(rolprftuple);
 
-	prftuple = get_profile_tuple(DatumGetObjectId(rolprfform->prfid));
+	prftuple = get_profile_tuple(DatumGetObjectId(rolprfform->rolprfprofile));
 	if (!HeapTupleIsValid(prftuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -680,18 +684,21 @@ YBCIncFailedAttemptsAndMaybeDisableProfile(Oid roleid)
 
 	prfform = (Form_pg_yb_profile) GETSTRUCT(prftuple);
 
-	current_failed_attempts = DatumGetInt16(rolprfform->rolfailedloginattempts);
-	failed_attempts_limit = DatumGetInt16(prfform->prffailedloginattempts);
+	current_failed_attempts = DatumGetInt16(rolprfform->rolprffailedloginattempts);
+	failed_attempts_limit = DatumGetInt16(prfform->prfmaxfailedloginattempts);
 
 	new_failed_attempts = current_failed_attempts < failed_attempts_limit
 						? current_failed_attempts + 1
 						: failed_attempts_limit + 1;
 
 	// Keep role enabled IFF role is enabled AND failed attempts < limit
-	rolisenabled = rolprfform->rolisenabled &&
-						(new_failed_attempts <= failed_attempts_limit);
+	rolprfstatus = rolprfform->rolprfstatus == ROLPRFSTATUS_OPEN &&
+						(new_failed_attempts <= failed_attempts_limit) ?
+						ROLPRFSTATUS_OPEN :
+						ROLPRFSTATUS_LOCKED;
+						;
 
-	YBCExecuteUpdateLoginAttempts(roleid, new_failed_attempts, rolisenabled);
+	YBCExecuteUpdateLoginAttempts(roleid, new_failed_attempts, rolprfstatus);
 	CommitTransactionCommand();
 }
 

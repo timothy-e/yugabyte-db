@@ -1134,7 +1134,7 @@ AlterOptRoleElem:
 						parser_ybc_not_support(@1, "PROFILE");
 					$$ = makeDefElem("profile", (Node *)makeString($2), @1);
 				}
- 			| NOPROFILE
+			| NOPROFILE
 				{
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
