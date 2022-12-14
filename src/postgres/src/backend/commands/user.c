@@ -39,8 +39,8 @@
 #include "utils/timestamp.h"
 #include "utils/tqual.h"
 
-#include <pg_yb_utils.h>
 #include "commands/yb_profile.h"
+#include "pg_yb_utils.h"
 
 /* Potentially set by pg_upgrade_support functions */
 Oid			binary_upgrade_next_pg_authid_oid = InvalidOid;
