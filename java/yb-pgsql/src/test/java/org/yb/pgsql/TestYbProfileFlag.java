@@ -48,13 +48,6 @@ public class TestYbProfileFlag extends BasePgSQLTest {
     }
   }
 
-  @Override
-  protected Map<String, String> getTServerFlags() {
-    Map<String, String> flagMap = super.getTServerFlags();
-    flagMap.put("ysql_enable_auth", "true");
-    return flagMap;
-  }
-
   @Test(expected = PSQLException.class)
   public void testCreateProfileIsDisabled() throws Exception {
     try (Statement stmt = connection.createStatement()) {
