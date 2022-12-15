@@ -71,9 +71,9 @@
 #include "utils/tqual.h"
 
 /* YB includes. */
-#include "pg_yb_utils.h"
-#include "catalog/pg_yb_role_profile_d.h"
 #include "catalog/pg_yb_profile_d.h"
+#include "catalog/pg_yb_role_profile_d.h"
+#include "pg_yb_utils.h"
 
 typedef enum
 {
