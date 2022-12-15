@@ -41,8 +41,10 @@ public class TestYbRoleProfile extends BasePgSQLTest {
   private static final String PROFILE_2_NAME = "prf2";
   private static final int PRF_1_FAILED_ATTEMPTS = 3;
   private static final int PRF_2_FAILED_ATTEMPTS = 2;
-  private static final String AUTHENTICATION_FAILED = "FATAL: password authentication failed for user \"%s\"";
-  private static final String ROLE_IS_LOCKED_OUT = "FATAL: role \"%s\" is locked. Contact your database administrator.";
+  private static final String AUTHENTICATION_FAILED =
+                              "FATAL: password authentication failed for user \"%s\"";
+  private static final String ROLE_IS_LOCKED_OUT =
+                              "FATAL: role \"%s\" is locked. Contact your database administrator.";
 
 
   @Override
@@ -68,7 +70,9 @@ public class TestYbRoleProfile extends BasePgSQLTest {
     return getConnectionBuilder().withPassword(TEST_PG_PASS).connect();
   }
 
-  private void attemptLogin(String username, String password, String expectedError) throws Exception {
+  private void attemptLogin(String username,
+      String password,
+      String expectedError) throws Exception {
     try {
       getConnectionBuilder()
         .withTServer(0)
