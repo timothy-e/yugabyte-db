@@ -22,8 +22,8 @@
  *------------------------------------------------------------------------------
  */
 
-#ifndef PROFILE_H
-#define PROFILE_H
+#ifndef YB_PROFILE_H
+#define YB_PROFILE_H
 
 #include "catalog/objectaddress.h"
 #include "lib/stringinfo.h"
@@ -49,4 +49,4 @@ extern HeapTuple get_role_profile_tuple_by_oid(Oid rolprfid);
 extern void YbRemoveRoleProfileForRole(Oid roleid, const char* rolename);
 extern void YbRemoveRoleProfileById(Oid roleprfid);
 
-#endif /* PROFILE_H */
+#endif /* YB_PROFILE_H */
