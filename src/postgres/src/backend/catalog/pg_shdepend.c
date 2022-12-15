@@ -1154,8 +1154,6 @@ storeObjectDescription(StringInfo descs,
 				appendStringInfo(descs, _("target of %s"), objdesc);
 			else if (deptype == SHARED_DEPENDENCY_TABLESPACE)
 				appendStringInfo(descs, _("tablespace of %s"), objdesc);
-			else if (deptype == SHARED_DEPENDENCY_PROFILE)
-				appendStringInfo(descs, _("%s"), objdesc);
 			else
 				elog(ERROR, "unrecognized dependency type: %d",
 					 (int) deptype);
@@ -1341,12 +1339,6 @@ shdepDropOwned(List *roleids, DropBehavior behavior)
 						obj.objectSubId = sdepForm->objsubid;
 						add_exact_object_address(&obj, deleteobjs);
 					}
-					break;
-				case SHARED_DEPENDENCY_PROFILE:
-					/*
-					 * If it is a profile object, do not delete. Profile associations can be
-					 * removed by ALTER USER <u> NOLOGIN
-					 */
 					break;
 			}
 		}

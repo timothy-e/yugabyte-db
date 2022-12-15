@@ -81,6 +81,11 @@
  * created only during initdb.  The fields for the dependent object
  * contain zeroes.
  *
+ * DEPENDENCY_PROFILE ('f'): the dependent object is a profile and the
+ * referenced object is a user. Since we cannot drop users in a DROP ...
+ * CASCADE, dependencies of this type will yield an error indicating that the
+ * profile cannot be dropped while users are still attached to it.
+ *
  * Other dependency flavors may be needed in future.
  */
 
@@ -92,7 +97,8 @@ typedef enum DependencyType
 	DEPENDENCY_INTERNAL_AUTO = 'I',
 	DEPENDENCY_EXTENSION = 'e',
 	DEPENDENCY_AUTO_EXTENSION = 'x',
-	DEPENDENCY_PIN = 'p'
+	DEPENDENCY_PIN = 'p',
+	DEPENDENCY_PROFILE = 'f'
 } DependencyType;
 
 /*
@@ -129,10 +135,6 @@ typedef enum DependencyType
  * this: they are protected by the existence of a physical file in the
  * tablespace.)
  *
- * (f) a SHARED_DEPENDENCY_PROFILE entry means that the referenced object is
- * a role that is mentioned in a pg_yb_role_profile row.
- * The referenced object must be a pg_authid entry.
- *
  * SHARED_DEPENDENCY_INVALID is a value used as a parameter in internal
  * routines, and is not valid in the catalog itself.
  */
@@ -143,7 +145,6 @@ typedef enum SharedDependencyType
 	SHARED_DEPENDENCY_ACL = 'a',
 	SHARED_DEPENDENCY_POLICY = 'r',
 	SHARED_DEPENDENCY_TABLESPACE = 't',
-	SHARED_DEPENDENCY_PROFILE = 'f',
 	SHARED_DEPENDENCY_INVALID = 0
 } SharedDependencyType;
 

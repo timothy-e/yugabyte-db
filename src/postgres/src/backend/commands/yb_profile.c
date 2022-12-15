@@ -296,11 +296,7 @@ create_role_profile_map(Oid roleid, Oid prfid)
 	roleprfid = CatalogTupleInsert(rel, tuple);
 
 	// Record dependencies on profile and role
-	ObjectAddress myself, profile, auth;
-
-	myself.classId = YbRoleProfileRelationId;
-	myself.objectId = roleprfid;
-	myself.objectSubId = 0;
+	ObjectAddress profile, auth;
 
 	auth.classId = AuthIdRelationId;
 	auth.objectId = roleid;
@@ -310,8 +306,7 @@ create_role_profile_map(Oid roleid, Oid prfid)
 	profile.objectId = prfid;
 	profile.objectSubId = 0;
 
-	recordSharedDependencyOn(&myself, &auth, SHARED_DEPENDENCY_PROFILE);
-	recordDependencyOn(&myself, &profile, DEPENDENCY_NORMAL);
+	recordDependencyOn(&auth, &profile, DEPENDENCY_PROFILE);
 
 	heap_freetuple(tuple);
 
@@ -478,7 +473,6 @@ YbCreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 	HeapTuple tuple;
 	Form_pg_yb_role_profile rolprfform;
 	Oid currentprfid;
-	Oid rolprfid;
 
 	/* Must be super user or yb_db_admin role */
 	if (!superuser() && !IsYbDbAdminUser(GetUserId()))
@@ -507,7 +501,6 @@ YbCreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 		return;
 	}
 
-	rolprfid = HeapTupleGetOid(tuple);
 	rolprfform = (Form_pg_yb_role_profile) GETSTRUCT(tuple);
 	currentprfid = rolprfform->rolprfprofile;
 
@@ -537,7 +530,7 @@ YbCreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 						new_record_repl, false);
 
 	// Change the dependency to the new profile
-	changeDependencyFor(YbRoleProfileRelationId, rolprfid,
+	changeDependencyFor(AuthIdRelationId, roleid,
 						YbProfileRelationId, currentprfid, prfid);
 	return;
 }
@@ -664,13 +657,19 @@ YbRemoveRoleProfileForRole(Oid roleid, const char *rolename)
 	Oid roleprfoid;
 	ObjectAddress myself;
 
-	roleprfoid = get_role_profile_oid(roleid, rolename, false);
+	HeapTuple rolprftuple = get_role_profile_tuple_by_role_oid(roleid);
+	if (!HeapTupleIsValid(rolprftuple))
+		// Role is not associated with a profile.
+		return;
+
+	roleprfoid = HeapTupleGetOid(rolprftuple);
 
 	myself.classId = YbRoleProfileRelationId;
 	myself.objectId = roleprfoid;
 	myself.objectSubId = 0;
 
 	performDeletion(&myself, DROP_RESTRICT, 0);
+	deleteDependencyRecordsForClass(AuthIdRelationId, roleid, YbProfileRelationId, DEPENDENCY_PROFILE);
 }
 
 /*

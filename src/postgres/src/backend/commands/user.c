@@ -1117,6 +1117,9 @@ DropRole(DropRoleStmt *stmt)
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("must be superuser to drop superusers")));
 
+		if (*YBCGetGFlags()->ysql_enable_profile)
+			YbRemoveRoleProfileForRole(roleid, role);
+
 		/* DROP hook for the role being removed */
 		InvokeObjectDropHook(AuthIdRelationId, roleid, 0);
 

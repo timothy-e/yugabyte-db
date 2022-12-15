@@ -13,6 +13,7 @@ SELECT oid, typname, typrelid FROM pg_type WHERE typname LIKE 'pg_yb_role_profil
 -- CREATE PROFILE
 --
 CREATE PROFILE test_profile LIMIT FAILED_LOGIN_ATTEMPTS 3;
+CREATE PROFILE test_profile_2 LIMIT FAILED_LOGIN_ATTEMPTS 3;
 CREATE USER restricted_user;
 
 -- fail: cannot lock/unlock a role that is not attached
@@ -31,25 +32,14 @@ SELECT prfname, prfmaxfailedloginattempts FROM pg_catalog.pg_yb_profile ORDER BY
 SELECT rolname from pg_catalog.pg_roles WHERE rolname = 'restricted_user';
 ALTER USER restricted_user PROFILE test_profile;
 --
--- Ensure dependencies betwee pg_yb_role_profile & pg_yb_profile
--- and pg_yb_role_profile & pg_roles is setup correctly
+-- Ensure dependencies between role & pg_yb_profile is setup correctly
 -- There should be one row
 SELECT count(*) FROM pg_yb_role_profile;
--- One row in pg_shdepend for the role profile
-SELECT count(*) FROM pg_shdepend shdep
-                JOIN pg_yb_role_profile rpf on rpf.oid = shdep.objid
-                WHERE shdep.deptype = 'f';
--- One row in pg_shdepend for the role
-SELECT count(*) FROM pg_shdepend shdep
-                JOIN pg_roles rol on rol.oid = shdep.refobjid
-                WHERE shdep.deptype = 'f' and rol.rolname = 'restricted_user';
--- One row in pg_depend for the role profile
-SELECT count(*) FROM pg_depend dep
-                JOIN pg_yb_role_profile rpf on rpf.oid = dep.objid;
--- One row in pg_depend for the profile
+-- One row in pg_depend for the profile -> role
 SELECT count(*) FROM pg_depend dep
                 JOIN pg_yb_profile prf on prf.oid = dep.refobjid
-                WHERE prf.prfname = 'test_profile';
+                JOIN pg_roles rol ON rol.oid = dep.objid
+                WHERE dep.deptype = 'f';
 
 -- Can connect when attached to a profile
 \c yugabyte restricted_user
@@ -72,41 +62,33 @@ SELECT rolprfstatus, rolprffailedloginattempts, rolname, prfname FROM
 -- Associating a role to the same profile is a no-op
 ALTER USER restricted_user PROFILE test_profile;
 
--- fail: Cannot drop a profile that has a role associated with it
+-- Associating a role to a different profile succeeds
+ALTER USER restricted_user PROFILE test_profile_2;
+
+-- We can drop a profile that does not have any users associated
 DROP PROFILE test_profile;
 
--- A role/user cannot be dropped because there is mapping to profile.
-DROP USER restricted_user;
+-- fail: Cannot drop a profile that has a role associated with it
+DROP PROFILE test_profile_2;
 
--- Remove the association of a role to a profile
+-- Removing the user's profile should clean up the mappings and dependencies.
 ALTER USER restricted_user NOPROFILE;
-SELECT rolprfstatus, rolprffailedloginattempts, rolname, prfname FROM
-    pg_catalog.pg_yb_role_profile rp JOIN pg_catalog.pg_roles rol ON rp.rolprfrole = rol.oid
-    JOIN pg_catalog.pg_yb_profile lp ON rp.rolprfprofile = lp.oid;
---
--- Ensure dependencies betwee pg_yb_role_profile & pg_yb_profile
--- and pg_yb_role_profile & pg_roles is setup correctly
--- There should be zero rows
 SELECT count(*) FROM pg_yb_role_profile;
--- pg_shdepend for the role profile
-SELECT count(*) FROM pg_shdepend shdep
-                JOIN pg_yb_role_profile rpf on rpf.oid = shdep.objid
-                WHERE shdep.deptype = 'f';
--- pg_shdepend for the role
-SELECT count(*) FROM pg_shdepend shdep
-                JOIN pg_roles rol on rol.oid = shdep.refobjid
-                WHERE shdep.deptype = 'f' and rol.rolname = 'restricted_user';
--- pg_depend for the role profile
-SELECT count(*) FROM pg_depend dep
-                JOIN pg_yb_role_profile rpf on rpf.oid = dep.objid;
--- pg_depend for the profile
 SELECT count(*) FROM pg_depend dep
                 JOIN pg_yb_profile prf on prf.oid = dep.refobjid
-                WHERE prf.prfname = 'test_profile';
+                JOIN pg_roles rol ON rol.oid = dep.objid
+                WHERE dep.deptype = 'f';
 
-
--- Can drop user as it is not attached to a profile. After dropping the user there should be 0 rows
-DROP USER restricted_user;
+-- Setting a new profile creates a new row in pg_yb_role_profile
+ALTER USER restricted_user PROFILE test_profile_2;
 SELECT count(*) FROM pg_yb_role_profile;
 
-DROP PROFILE test_profile;
+-- Dropping the user should clean up the mappings and dependencies.
+DROP USER restricted_user;
+SELECT count(*) FROM pg_yb_role_profile;
+SELECT count(*) FROM pg_depend dep
+                JOIN pg_yb_profile prf on prf.oid = dep.refobjid
+                JOIN pg_roles rol ON rol.oid = dep.objid
+                WHERE dep.deptype = 'f';
+
+DROP PROFILE test_profile_2;

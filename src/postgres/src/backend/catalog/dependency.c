@@ -72,6 +72,7 @@
 #include "commands/tablegroup.h"
 #include "commands/trigger.h"
 #include "commands/typecmds.h"
+#include "miscadmin.h"
 #include "nodes/nodeFuncs.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteRemove.h"
@@ -707,6 +708,20 @@ findDependentObjects(const ObjectAddress *object,
 				elog(ERROR, "incorrect use of PIN dependency with %s",
 					 getObjectDescription(object));
 				break;
+			case DEPENDENCY_PROFILE:
+
+				/*
+				 * We cannot drop a profile that is attached to a user. An
+				 * error is thrown so that the DROP ... CASCADE hint is not
+				 * displayed, as that is not helpful in this situation.
+				 */
+				ereport(ERROR,
+						(errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
+						 errmsg("cannot drop %s because it is associated with %s",
+								getObjectDescription(object),
+								getObjectDescription(&otherObject)),
+						 errhint("Use ALTER USER %s NOPROFILE first.",
+								 GetUserNameFromId(otherObject.objectId, true))));
 			default:
 				elog(ERROR, "unrecognized dependency type '%c' for %s",
 					 foundDep->deptype, getObjectDescription(object));
@@ -804,6 +819,22 @@ findDependentObjects(const ObjectAddress *object,
 						(errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
 						 errmsg("cannot drop %s because it is required by the database system",
 								getObjectDescription(object))));
+				subflags = 0;	/* keep compiler quiet */
+				break;
+			case DEPENDENCY_PROFILE:
+
+				/*
+				 * We cannot drop a profile that is attached to a user. An
+				 * error is thrown so that the DROP ... CASCADE hint is not
+				 * displayed, as that is not helpful in this situation.
+				 */
+				ereport(ERROR,
+						(errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
+						 errmsg("cannot drop %s because it is associated with %s",
+								getObjectDescription(object),
+								getObjectDescription(&otherObject)),
+						 errhint("Use ALTER USER %s NOPROFILE first.",
+								 GetUserNameFromId(otherObject.objectId, true))));
 				subflags = 0;	/* keep compiler quiet */
 				break;
 			default:
