@@ -27,11 +27,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.yb.YBTestRunner;
 import org.yb.minicluster.YsqlSnapshotVersion;
+import org.yb.util.YBTestRunnerNonTsanOnly;
 
 import com.yugabyte.util.PSQLException;
-@RunWith(value=YBTestRunner.class)
+
+@RunWith(value = YBTestRunnerNonTsanOnly.class)
 public class TestYbRoleProfile extends BasePgSQLTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestPgSequences.class);
