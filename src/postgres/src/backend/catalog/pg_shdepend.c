@@ -1345,7 +1345,7 @@ shdepDropOwned(List *roleids, DropBehavior behavior)
 				case SHARED_DEPENDENCY_PROFILE:
 					/*
 					 * If it is a profile object, do not delete. Profile associations can be
-					 * removed by ALTER USER <u> NOLOGIN
+					 * removed by ALTER USER <u> NOPROFILE
 					 */
 					break;
 			}
