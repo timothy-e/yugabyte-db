@@ -651,6 +651,7 @@ ClientAuthentication(Port *port)
 			{
 				Form_pg_yb_role_profile rolprfform = (Form_pg_yb_role_profile)
 											GETSTRUCT(profileTuple);
+				elog(WARNING, "role has %d failed attempts", rolprfform->rolprffailedloginattempts);
 				if (rolprfform->rolprfstatus != ROLPRFSTATUS_OPEN)
 				{
 					profile_is_disabled = true;
@@ -661,8 +662,6 @@ ClientAuthentication(Port *port)
 
 		if (status == STATUS_OK && !profile_is_disabled)
 		{
-			if (roleid != InvalidOid)
-				YbResetFailedAttemptsIfAllowed(roleid);
 			sendAuthRequest(port, AUTH_REQ_OK, NULL, 0);
 		}
 		else

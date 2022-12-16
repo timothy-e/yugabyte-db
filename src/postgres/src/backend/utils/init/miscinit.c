@@ -597,9 +597,7 @@ void
 InitializeSessionUserId(const char *rolename, Oid roleid)
 {
 	HeapTuple	roleTup;
-	HeapTuple	rolPrfTup;
 	Form_pg_authid rform;
-	Form_pg_yb_role_profile rpform;
 	char	   *rname;
 
 	/*
@@ -675,21 +673,6 @@ InitializeSessionUserId(const char *rolename, Oid roleid)
 					(errcode(ERRCODE_TOO_MANY_CONNECTIONS),
 					 errmsg("too many connections for role \"%s\"",
 							rname)));
-
-		if (*YBCGetGFlags()->ysql_enable_profile && YbLoginProfileCatalogsExist)
-		{
-			rolPrfTup = get_role_profile_tuple_by_role_oid(MyProc->roleId);
-			if (HeapTupleIsValid(rolPrfTup))
-			{
-				rpform = (Form_pg_yb_role_profile) GETSTRUCT(rolPrfTup);
-
-				if (rpform->rolprfstatus != ROLPRFSTATUS_OPEN)
-					ereport(FATAL,
-							(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
-							 errmsg("role \"%s\" is locked. Contact your database administrator.",
-									rname)));
-			}
-		}
 	}
 
 	/* Record username and superuser status as GUC settings too */

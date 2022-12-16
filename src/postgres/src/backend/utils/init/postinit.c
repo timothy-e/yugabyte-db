@@ -48,6 +48,7 @@
 #include "catalog/pg_database.h"
 #include "catalog/pg_db_role_setting.h"
 #include "catalog/pg_tablespace.h"
+#include "commands/yb_profile.h"
 #include "libpq/auth.h"
 #include "libpq/libpq-be.h"
 #include "mb/pg_wchar.h"
@@ -593,6 +594,8 @@ InitPostgresImpl(const char *in_dbname, Oid dboid, const char *username,
 	bool		am_superuser;
 	char	   *fullpath;
 	char		dbname[NAMEDATALEN];
+	HeapTuple	rolPrfTup;
+	Form_pg_yb_role_profile rpform;
 
 	elog(DEBUG3, "InitPostgres");
 
@@ -1103,6 +1106,29 @@ InitPostgresImpl(const char *in_dbname, Oid dboid, const char *username,
 	}
 
 	RelationCacheInitializePhase3();
+
+
+	/* TODO(profile):
+	 * move this to a separate function for cleanliness
+	 * test more thoroughly - are the tables actually valid to read right now
+	 * update this function to use transactions instead of YBCExec...
+	 */
+	if (*YBCGetGFlags()->ysql_enable_profile && YbLoginProfileCatalogsExist)
+	{
+		rolPrfTup = get_role_profile_tuple_by_role_oid(useroid);
+		if (HeapTupleIsValid(rolPrfTup))
+		{
+			rpform = (Form_pg_yb_role_profile) GETSTRUCT(rolPrfTup);
+
+			if (rpform->rolprfstatus != ROLPRFSTATUS_OPEN)
+				ereport(FATAL,
+						(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
+							errmsg("role \"%s\" is locked. Contact your database administrator.",
+								username)));
+			else
+				YbResetFailedAttemptsIfAllowed(useroid);
+		}
+	}
 
 	/*
 	 * Also cache whether the database is colocated for optimization purposes.
