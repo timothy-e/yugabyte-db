@@ -777,11 +777,9 @@ AlterRole(AlterRoleStmt *stmt)
 		if (profile != NULL)
 			YbCreateRoleProfile(roleid, rolename, profile);
 		else if (dunlocked != NULL)
-		{
 			YbSetRoleProfileStatus(roleid, rolename,
 								   unlocked == 0 ? ROLPRFSTATUS_LOCKED
 												 : ROLPRFSTATUS_OPEN);
-		}
 		else
 			YbRemoveRoleProfileForRole(roleid);
 
