@@ -2193,9 +2193,9 @@ typedef struct OptSplit
 
 typedef struct CreateProfileStmt
 {
-	NodeTag type;
-	char   *prfname;
-	Value  *prffailedloginattempts;
+	NodeTag		type;
+	char	   *prfname;
+	Value	   *prffailedloginattempts;
 } CreateProfileStmt;
 
 /* ----------------------
