@@ -685,13 +685,9 @@ YbMaybeIncFailedAttemptsAndDisableProfile(Oid roleid)
 void
 YbRemoveRoleProfileForRole(Oid roleid, const char *rolename)
 {
-	ObjectAddress myself;
+	/* TODO(profile): remove pg_yb_role_profile row */
 
-	myself.classId = AuthIdRelationId;
-	myself.objectId = roleid;
-	myself.objectSubId = 0;
-
-	performDeletion(&myself, DROP_RESTRICT, 0);
+	deleteSharedDependencyRecordsFor(AuthIdRelationId, roleid, 0);
 }
 
 /*
