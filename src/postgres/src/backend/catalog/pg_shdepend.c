@@ -471,6 +471,28 @@ changeDependencyOnProfile(Oid classId, Oid objectId, Oid newProfileId)
 	heap_close(sdepRel, RowExclusiveLock);
 }
 
+
+
+/*
+ * dropDependencyOnProfile
+ *
+ * Delete all pg_shdepend entries corresponding to a user -> profile mapping.
+ */
+void
+dropDependencyOnProfile(Oid roleId)
+{
+	Relation	sdepRel;
+
+	sdepRel = heap_open(SharedDependRelationId, RowExclusiveLock);
+
+	shdepDropDependency(sdepRel, AuthIdRelationId, roleId, 0,
+						true,
+						YbProfileRelationId, InvalidOid,
+						SHARED_DEPENDENCY_PROFILE);
+
+	heap_close(sdepRel, RowExclusiveLock);
+}
+
 /*
  * getOidListDiff
  *		Helper for updateAclDependencies.

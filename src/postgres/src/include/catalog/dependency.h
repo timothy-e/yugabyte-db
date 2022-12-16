@@ -306,6 +306,8 @@ extern void recordDependencyOnProfile(Oid classId, Oid objectId, Oid profile);
 extern void changeDependencyOnProfile(Oid classId, Oid objectId,
 									  Oid newProfileId);
 
+extern void dropDependencyOnProfile(Oid roleId);
+
 extern void updateAclDependencies(Oid classId, Oid objectId, int32 objectSubId,
 					  Oid ownerId,
 					  int noldmembers, Oid *oldmembers,
