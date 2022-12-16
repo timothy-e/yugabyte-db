@@ -687,6 +687,12 @@ YbRemoveRoleProfileForRole(Oid roleid)
 {
 	/* TODO(profile): remove pg_yb_role_profile row */
 
+	/*
+	 * TODO(profile): check that this deletes only role->profile pg_shdepend
+	 * record.  Assumption right now is that that is the only record that
+	 * exists where objid=role.  To be safe, it is probably best to make (or
+	 * find) a function to delete the specific role->profile dependency record.
+	 */
 	deleteSharedDependencyRecordsFor(AuthIdRelationId, roleid, 0);
 }
 
