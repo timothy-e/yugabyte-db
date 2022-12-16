@@ -559,7 +559,7 @@ YbCreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 						new_record_repl, false);
 
 	/* Record dependency on profile */
-	changeDependencyOnProfile(AuthIdRelationId, roleid, prfid);
+	changeDependencyOnProfile(roleid, prfid);
 }
 
 /*

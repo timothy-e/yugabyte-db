@@ -303,8 +303,7 @@ extern void changeDependencyOnTablespace(Oid classId, Oid objectId,
 
 extern void recordDependencyOnProfile(Oid classId, Oid objectId, Oid profile);
 
-extern void changeDependencyOnProfile(Oid classId, Oid objectId,
-									  Oid newProfileId);
+extern void changeDependencyOnProfile(Oid roleId, Oid newProfileId);
 
 extern void dropDependencyOnProfile(Oid roleId);
 
