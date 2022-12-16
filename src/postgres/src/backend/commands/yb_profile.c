@@ -573,9 +573,8 @@ YbCreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 						new_record_nulls,
 						new_record_repl, false);
 
-	// Change the dependency to the new profile
-	changeDependencyFor(AuthIdRelationId, roleid,
-						YbProfileRelationId, oldprfid, prfid);
+	/* Record dependency on profile */
+	changeDependencyOnProfile(AuthIdRelationId, roleid, prfid);
 }
 
 /*
