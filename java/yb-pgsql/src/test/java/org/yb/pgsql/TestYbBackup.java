@@ -1811,7 +1811,7 @@ public class TestYbBackup extends BasePgSQLTest {
       stmt.execute("INSERT INTO tbl SELECT generate_series(101,200)");
       assertQuery(stmt, "SELECT median(v) FROM tbl", new Row(100.5));
       // Test view.
-      assertQuery(stmt, "SELECT COUNT(*) FROM oracle.user_tables", new Row(76));
+      assertQuery(stmt, "SELECT COUNT(*) FROM oracle.user_tables", new Row(78));
 
       // Test whether extension membership is set correctly after restoration.
       stmt.execute("DROP EXTENSION orafce CASCADE");
