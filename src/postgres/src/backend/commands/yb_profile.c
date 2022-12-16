@@ -344,8 +344,6 @@ Oid
 create_role_profile_map(Oid roleid, Oid prfid)
 {
 	Relation  rel;
-	ObjectAddress myself;
-	ObjectAddress referenced;
 	Datum	  values[Natts_pg_yb_role_profile];
 	bool	  nulls[Natts_pg_yb_role_profile];
 	HeapTuple tuple;
@@ -371,16 +369,7 @@ create_role_profile_map(Oid roleid, Oid prfid)
 
 	roleprfid = CatalogTupleInsert(rel, tuple);
 
-	myself.classId = AuthIdRelationId;
-	myself.objectId = roleid;
-	myself.objectSubId = 0;
-
-	/* Record dependency on profile */
-	referenced.classId = YbProfileRelationId;
-	referenced.objectId = prfid;
-	referenced.objectSubId = 0;
-
-	recordSharedDependencyOn(&myself, &referenced, SHARED_DEPENDENCY_PROFILE);
+	recordDependencyOnProfile(AuthIdRelationId, roleid, prfid);
 
 	heap_freetuple(tuple);
 

@@ -301,6 +301,8 @@ extern void recordDependencyOnTablespace(Oid classId, Oid objectId,
 extern void changeDependencyOnTablespace(Oid classId, Oid objectId,
 										 Oid newTablespaceId);
 
+extern void recordDependencyOnProfile(Oid classId, Oid objectId, Oid profile);
+
 extern void changeDependencyOnProfile(Oid classId, Oid objectId,
 									  Oid newProfileId);
 

@@ -354,7 +354,7 @@ changeDependencyOnOwner(Oid classId, Oid objectId, Oid newOwnerId)
  * recordDependencyOnTablespace
  *
  * A convenient wrapper of recordSharedDependencyOn -- register the specified
- * tablespace as default for the given object.
+ * tablespace to the given object.
  *
  * Note: it's the caller's responsibility to ensure that there isn't a
  * tablespace entry for the object already.
@@ -419,6 +419,27 @@ changeDependencyOnTablespace(Oid classId, Oid objectId, Oid newTablespaceId)
 							SHARED_DEPENDENCY_INVALID);
 
 	heap_close(sdepRel, RowExclusiveLock);
+}
+
+/*
+ * recordDependencyOnProfile
+ *
+ * A convenient wrapper of recordSharedDependencyOn -- register the specified
+ * profile to the given object.
+ *
+ * Note: it's the caller's responsibility to ensure that there isn't a profile
+ * entry for the object already.
+ */
+void
+recordDependencyOnProfile(Oid classId, Oid objectId, Oid profile)
+{
+	ObjectAddress myself, referenced;
+
+	ObjectAddressSet(myself, classId, objectId);
+	ObjectAddressSet(referenced, YbProfileRelationId, profile);
+
+	recordSharedDependencyOn(&myself, &referenced,
+							 SHARED_DEPENDENCY_PROFILE);
 }
 
 /*
