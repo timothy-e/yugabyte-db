@@ -239,8 +239,8 @@ check_xact_readonly(Node *parsetree)
 		case T_CreateSubscriptionStmt:
 		case T_AlterSubscriptionStmt:
 		case T_DropSubscriptionStmt:
-		case T_CreateProfileStmt:
-		case T_DropProfileStmt:
+		case T_YbCreateProfileStmt:
+		case T_YbDropProfileStmt:
 			PreventCommandIfReadOnly(CreateCommandTag(parsetree));
 			PreventCommandIfParallelMode(CreateCommandTag(parsetree));
 			break;
@@ -572,15 +572,15 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 			break;
 
 		/* TODO(profile): move these YB cases to separate block. */
-		case T_CreateProfileStmt:
+		case T_YbCreateProfileStmt:
 			PreventInTransactionBlock(isTopLevel, "CREATE PROFILE");
-			YbCreateProfile((CreateProfileStmt *) parsetree);
+			YbCreateProfile((YbCreateProfileStmt *) parsetree);
 			break;
 
-		case T_DropProfileStmt:
+		case T_YbDropProfileStmt:
 			/* no event triggers for global objects */
 			PreventInTransactionBlock(isTopLevel, "DROP PROFILE");
-			YbDropProfile((DropProfileStmt *) parsetree);
+			YbDropProfile((YbDropProfileStmt *) parsetree);
 			break;
 
 		case T_TruncateStmt:
@@ -2904,11 +2904,11 @@ CreateCommandTag(Node *parsetree)
 			break;
 
 		/* TODO(profile): move these YB cases to separate block. */
-		case T_CreateProfileStmt:
+		case T_YbCreateProfileStmt:
 			tag = "CREATE PROFILE";
 			break;
 
-		case T_DropProfileStmt:
+		case T_YbDropProfileStmt:
 			tag = "DROP PROFILE";
 			break;
 

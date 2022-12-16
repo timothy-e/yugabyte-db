@@ -312,7 +312,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 		CreateMatViewStmt RefreshMatViewStmt CreateAmStmt
 		CreatePublicationStmt AlterPublicationStmt
 		CreateSubscriptionStmt AlterSubscriptionStmt DropSubscriptionStmt
-		BackfillIndexStmt CreateProfileStmt DropProfileStmt
+		BackfillIndexStmt YbCreateProfileStmt YbDropProfileStmt
 
 %type <node>	select_no_parens select_with_parens select_clause
 				simple_select values_clause
@@ -922,7 +922,6 @@ stmt :
 			| CreateOpClassStmt
 			| CreateOpFamilyStmt
 			| CreatePolicyStmt
-			| CreateProfileStmt
 			| CreateRoleStmt
 			| CreateSchemaStmt
 			| CreateStatsStmt
@@ -941,7 +940,6 @@ stmt :
 			| DropOpFamilyStmt
 			| DropOwnedStmt
 			| DropPLangStmt
-			| DropProfileStmt
 			| DropRoleStmt
 			| DropStmt
 			| DropTableSpaceStmt
@@ -972,6 +970,8 @@ stmt :
 			| VariableSetStmt
 			| VariableShowStmt
 			| ViewStmt
+			| YbCreateProfileStmt
+			| YbDropProfileStmt
 
 			/* BETA features */
 			/* TODO(#10263): Fix individual beta flag feature bools */
@@ -4854,11 +4854,11 @@ DropTableSpaceStmt: DROP TABLESPACE name
  *
  *****************************************************************************/
 
-CreateProfileStmt: CREATE PROFILE name LIMIT FAILED_LOGIN_ATTEMPTS Iconst
+YbCreateProfileStmt: CREATE PROFILE name LIMIT FAILED_LOGIN_ATTEMPTS Iconst
 				{
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
-					CreateProfileStmt *n = makeNode(CreateProfileStmt);
+					YbCreateProfileStmt *n = makeNode(YbCreateProfileStmt);
 
 					n->prfname = $3;
 					if (strcmp(n->prfname, "default") == 0)
@@ -4880,11 +4880,11 @@ CreateProfileStmt: CREATE PROFILE name LIMIT FAILED_LOGIN_ATTEMPTS Iconst
  *
  *****************************************************************************/
 
-DropProfileStmt: DROP PROFILE name
+YbDropProfileStmt: DROP PROFILE name
 				{
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
-					DropProfileStmt *n = makeNode(DropProfileStmt);
+					YbDropProfileStmt *n = makeNode(YbDropProfileStmt);
 
 					n->prfname = $3;
 					if (strcmp(n->prfname, "default") == 0)
@@ -4901,7 +4901,7 @@ DropProfileStmt: DROP PROFILE name
 				{
 					if (!*YBCGetGFlags()->ysql_enable_profile)
 						parser_ybc_not_support(@1, "PROFILE");
-					DropProfileStmt *n = makeNode(DropProfileStmt);
+					YbDropProfileStmt *n = makeNode(YbDropProfileStmt);
 
 					n->prfname = $5;
 					if (strcmp(n->prfname, "default") == 0)

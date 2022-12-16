@@ -1794,7 +1794,7 @@ _equalDiscardStmt(const DiscardStmt *a, const DiscardStmt *b)
 }
 
 static bool
-_equalCreateProfileStmt(const CreateProfileStmt *a, const CreateProfileStmt *b)
+_equalCreateProfileStmt(const YbCreateProfileStmt *a, const YbCreateProfileStmt *b)
 {
 	COMPARE_STRING_FIELD(prfname);
 	COMPARE_SCALAR_FIELD(prffailedloginattempts);
@@ -1802,7 +1802,7 @@ _equalCreateProfileStmt(const CreateProfileStmt *a, const CreateProfileStmt *b)
 }
 
 static bool
-_equalDropProfileStmt(const DropProfileStmt *a, const DropProfileStmt *b)
+_equalDropProfileStmt(const YbDropProfileStmt *a, const YbDropProfileStmt *b)
 {
 	COMPARE_STRING_FIELD(prfname);
 	COMPARE_SCALAR_FIELD(missing_ok);
@@ -3496,10 +3496,10 @@ equal(const void *a, const void *b)
 		case T_DiscardStmt:
 			retval = _equalDiscardStmt(a, b);
 			break;
-		case T_CreateProfileStmt:
+		case T_YbCreateProfileStmt:
 			retval = _equalCreateProfileStmt(a, b);
 			break;
-		case T_DropProfileStmt:
+		case T_YbDropProfileStmt:
 			retval = _equalDropProfileStmt(a, b);
 			break;
 		case T_CreateTableGroupStmt:

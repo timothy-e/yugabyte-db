@@ -426,7 +426,6 @@ CreateOpClassStmt
 CreateOpFamilyStmt
 CreatePLangStmt
 CreatePolicyStmt
-CreateProfileStmt
 CreatePublicationStmt
 CreateRangeStmt
 CreateReplicationSlotCmd
@@ -2645,6 +2644,7 @@ XmlTableBuilderData
 YYLTYPE
 YYSTYPE
 YY_BUFFER_STATE
+YbCreateProfileStmt
 ZipfCache
 ZipfCell
 _SPI_connection

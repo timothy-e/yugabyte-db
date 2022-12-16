@@ -62,7 +62,7 @@ CheckProfileCatalogsExist()
  * Create a profile.
  */
 Oid
-YbCreateProfile(CreateProfileStmt *stmt)
+YbCreateProfile(YbCreateProfileStmt *stmt)
 {
 	Relation  rel;
 	Datum	  values[Natts_pg_yb_profile];
@@ -214,7 +214,7 @@ get_profile_name(Oid prfid)
  * DROP PROFILE
  */
 void
-YbDropProfile(DropProfileStmt *stmt)
+YbDropProfile(YbDropProfileStmt *stmt)
 {
 	char	   *prfname = stmt->prfname;
 	HeapScanDesc scandesc;

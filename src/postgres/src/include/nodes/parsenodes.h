@@ -2191,19 +2191,19 @@ typedef struct OptSplit
  * ----------------------
  */
 
-typedef struct CreateProfileStmt
+typedef struct YbCreateProfileStmt
 {
 	NodeTag		type;
 	char	   *prfname;
 	Value	   *prffailedloginattempts;
-} CreateProfileStmt;
+} YbCreateProfileStmt;
 
-typedef struct DropProfileStmt
+typedef struct YbDropProfileStmt
 {
 	NodeTag		type;
 	char	   *prfname;
 	bool		missing_ok;		/* skip error if missing? */
-} DropProfileStmt;
+} YbDropProfileStmt;
 
 /* ----------------------
  *		Create/Drop Tablegroup Statements

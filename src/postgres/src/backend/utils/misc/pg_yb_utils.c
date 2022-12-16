@@ -1301,7 +1301,7 @@ bool IsTransactionalDdlStatement(PlannedStmt *pstmt,
 
 		case T_CreateDomainStmt:
 		case T_CreateEnumStmt:
-		case T_CreateProfileStmt:
+		case T_YbCreateProfileStmt:
 		case T_CreateTableGroupStmt:
 		case T_CreateTableSpaceStmt:
 		case T_DefineStmt: // CREATE OPERATOR/AGGREGATE/COLLATION/etc
@@ -1465,7 +1465,7 @@ bool IsTransactionalDdlStatement(PlannedStmt *pstmt,
 
 		// All T_Drop... tags from nodes.h:
 		case T_DropOwnedStmt:
-		case T_DropProfileStmt:
+		case T_YbDropProfileStmt:
 		case T_DropReplicationSlotCmd:
 		case T_DropRoleStmt:
 		case T_DropSubscriptionStmt:

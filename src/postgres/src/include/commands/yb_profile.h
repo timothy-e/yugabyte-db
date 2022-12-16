@@ -27,8 +27,8 @@
 
 #include "nodes/parsenodes.h"
 
-extern Oid	YbCreateProfile(CreateProfileStmt* stmt);
-extern void YbDropProfile(DropProfileStmt* stmt);
+extern Oid	YbCreateProfile(YbCreateProfileStmt* stmt);
+extern void YbDropProfile(YbDropProfileStmt* stmt);
 
 extern Oid	get_profile_oid(const char* prfname, bool missing_ok);
 extern char* get_profile_name(Oid prfid);

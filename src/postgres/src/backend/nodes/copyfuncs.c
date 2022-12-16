@@ -4072,20 +4072,20 @@ _copyDiscardStmt(const DiscardStmt *from)
 	return newnode;
 }
 
-static CreateProfileStmt *
-_copyCreateProfileStmt(const CreateProfileStmt *from)
+static YbCreateProfileStmt *
+_copyCreateProfileStmt(const YbCreateProfileStmt *from)
 {
-	CreateProfileStmt *newnode = makeNode(CreateProfileStmt);
+	YbCreateProfileStmt *newnode = makeNode(YbCreateProfileStmt);
 
 	COPY_STRING_FIELD(prfname);
 	COPY_SCALAR_FIELD(prffailedloginattempts);
 	return newnode;
 }
 
-static DropProfileStmt *
-_copyDropProfileStmt(const DropProfileStmt *from)
+static YbDropProfileStmt *
+_copyDropProfileStmt(const YbDropProfileStmt *from)
 {
-	DropProfileStmt *newnode = makeNode(DropProfileStmt);
+	YbDropProfileStmt *newnode = makeNode(YbDropProfileStmt);
 
 	COPY_STRING_FIELD(prfname);
 	COPY_SCALAR_FIELD(missing_ok);
@@ -5531,10 +5531,10 @@ copyObjectImpl(const void *from)
 		case T_DiscardStmt:
 			retval = _copyDiscardStmt(from);
 			break;
-		case T_CreateProfileStmt:
+		case T_YbCreateProfileStmt:
 			retval = _copyCreateProfileStmt(from);
 			break;
-		case T_DropProfileStmt:
+		case T_YbDropProfileStmt:
 			retval = _copyDropProfileStmt(from);
 			break;
 		case T_CreateTableGroupStmt:
