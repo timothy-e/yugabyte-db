@@ -25,8 +25,6 @@
 #ifndef YB_PROFILE_H
 #define YB_PROFILE_H
 
-#include "catalog/objectaddress.h"
-#include "lib/stringinfo.h"
 #include "nodes/parsenodes.h"
 
 extern Oid	YbCreateProfile(CreateProfileStmt* stmt);
