@@ -1155,7 +1155,7 @@ storeObjectDescription(StringInfo descs,
 			else if (deptype == SHARED_DEPENDENCY_TABLESPACE)
 				appendStringInfo(descs, _("tablespace of %s"), objdesc);
 			else if (deptype == SHARED_DEPENDENCY_PROFILE)
-				appendStringInfo(descs, _("%s"), objdesc);
+				appendStringInfo(descs, _("profile of %s"), objdesc);
 			else
 				elog(ERROR, "unrecognized dependency type: %d",
 					 (int) deptype);

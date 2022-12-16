@@ -2198,6 +2198,13 @@ typedef struct CreateProfileStmt
 	Value	   *prffailedloginattempts;
 } CreateProfileStmt;
 
+typedef struct DropProfileStmt
+{
+	NodeTag		type;
+	char	   *prfname;
+	bool		missing_ok;		/* skip error if missing? */
+} DropProfileStmt;
+
 /* ----------------------
  *		Create/Drop Tablegroup Statements
  * ----------------------

@@ -240,6 +240,7 @@ check_xact_readonly(Node *parsetree)
 		case T_AlterSubscriptionStmt:
 		case T_DropSubscriptionStmt:
 		case T_CreateProfileStmt:
+		case T_DropProfileStmt:
 			PreventCommandIfReadOnly(CreateCommandTag(parsetree));
 			PreventCommandIfParallelMode(CreateCommandTag(parsetree));
 			break;
@@ -570,9 +571,16 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 			AlterTableSpaceOptions((AlterTableSpaceOptionsStmt *) parsetree);
 			break;
 
+		/* TODO(profile): move these YB cases to separate block. */
 		case T_CreateProfileStmt:
 			PreventInTransactionBlock(isTopLevel, "CREATE PROFILE");
 			YbCreateProfile((CreateProfileStmt *) parsetree);
+			break;
+
+		case T_DropProfileStmt:
+			/* no event triggers for global objects */
+			PreventInTransactionBlock(isTopLevel, "DROP PROFILE");
+			YbDropProfile((DropProfileStmt *) parsetree);
 			break;
 
 		case T_TruncateStmt:
@@ -2895,8 +2903,13 @@ CreateCommandTag(Node *parsetree)
 			tag = "ALTER COLLATION";
 			break;
 
+		/* TODO(profile): move these YB cases to separate block. */
 		case T_CreateProfileStmt:
 			tag = "CREATE PROFILE";
+			break;
+
+		case T_DropProfileStmt:
+			tag = "DROP PROFILE";
 			break;
 
 		case T_PrepareStmt:

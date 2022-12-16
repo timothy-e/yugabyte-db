@@ -1317,6 +1317,11 @@ doDeletion(const ObjectAddress *object, int flags)
 		case OCLASS_TRANSFORM:
 			DropTransformById(object->objectId);
 			break;
+
+		case OCLASS_TBLGROUP:
+			RemoveTablegroupById(object->objectId);
+			break;
+
 			/*
 			 * These global object types are not supported here.
 			 */
@@ -1324,20 +1329,9 @@ doDeletion(const ObjectAddress *object, int flags)
 		case OCLASS_DATABASE:
 		case OCLASS_TBLSPACE:
 		case OCLASS_SUBSCRIPTION:
-			elog(ERROR, "global objects cannot be deleted by doDeletion");
-			break;
-
-		/* YB cases */
-		case OCLASS_TBLGROUP:
-			RemoveTablegroupById(object->objectId);
-			break;
-
 		case OCLASS_YBPROFILE:
-			YbRemoveProfileById(object->objectId);
-			break;
-
 		case OCLASS_YBROLE_PROFILE:
-			YbRemoveRoleProfileById(object->objectId);
+			elog(ERROR, "global objects cannot be deleted by doDeletion");
 			break;
 
 			/*

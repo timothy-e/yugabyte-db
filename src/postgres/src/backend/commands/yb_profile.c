@@ -211,38 +211,102 @@ get_profile_name(Oid prfid)
 }
 
 /*
- * YbRemoveProfileById - remove a profile by its OID.
- * If a profile does not exist with the provided oid, then an error is
- * raised.
- *
- * prfid - the oid of the profile.
+ * DROP PROFILE
  */
 void
-YbRemoveProfileById(Oid prfid)
+YbDropProfile(DropProfileStmt *stmt)
 {
-	Relation	 pg_profile_rel;
+	char	   *prfname = stmt->prfname;
 	HeapScanDesc scandesc;
-	ScanKeyData	 skey[1];
-	HeapTuple	 tuple;
+	Relation	rel;
+	HeapTuple	tuple;
+	ScanKeyData entry[1];
+	Oid			prfid;
+	char	   *detail;
+	char	   *detail_log;
 
 	CheckProfileCatalogsExist();
 
-	pg_profile_rel = heap_open(YbProfileRelationId, RowExclusiveLock);
+	/* A profile can only be dropped by the super user or yb_db_admin */
+	if (!superuser() && !IsYbDbAdminUser(GetUserId()))
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("permission denied to drop profile"),
+				 errhint("Must be superuser or a member of the yb_db_admin "
+						 "role to drop a profile.")));
+
+	/*
+	 * Find the target tuple
+	 */
+	rel = heap_open(YbProfileRelationId, RowExclusiveLock);
 
 	/*
 	 * Find the profile to delete.
 	 */
-	ScanKeyInit(&skey[0], ObjectIdAttributeNumber, BTEqualStrategyNumber,
-				F_OIDEQ, ObjectIdGetDatum(prfid));
-	scandesc = heap_beginscan_catalog(pg_profile_rel, 1, skey);
+	ScanKeyInit(&entry[0],
+				Anum_pg_yb_profile_prfname,
+				BTEqualStrategyNumber,
+				F_NAMEEQ,
+				CStringGetDatum(prfname));
+	scandesc = heap_beginscan_catalog(rel, 1, entry);
 	tuple = heap_getnext(scandesc, ForwardScanDirection);
 
-	/* If the profile does not exist, raise an error. */
 	if (!HeapTupleIsValid(tuple))
 	{
+		if (!stmt->missing_ok)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("profile \"%s\" does not exist",
+							prfname)));
+		else
+		{
+			ereport(NOTICE,
+					(errmsg("profile \"%s\" does not exist, skipping",
+							prfname)));
+			/* XXX I assume I need one or both of these next two calls */
+			heap_endscan(scandesc);
+			heap_close(rel, NoLock);
+		}
+		return;
+	}
+
+	prfid = HeapTupleGetOid(tuple);
+
+	/*
+	 * TODO(profile): disallow drop of the default profile once we introduce a
+	 * default profile.
+	 */
+
+	/* Check for pg_shdepend entries depending on this tablespace */
+	if (checkSharedDependencies(YbProfileRelationId, prfid,
+								&detail, &detail_log))
+	{
+		if (IsYugaByteEnabled() && detail != NULL)
+			detail = YBDetailSorted(detail);
 		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("profile with oid %u does not exist", prfid)));
+				(errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
+				 errmsg("profile \"%s\" cannot be dropped "
+						"because some objects depend on it",
+						prfname),
+				 errdetail_internal("%s", detail),
+				 errdetail_log("%s", detail_log)));
+	}
+
+	/*
+	 * Check if there are snapshot schedules, disallow dropping in such cases.
+	 * TODO(profile): determine if this limitation is really needed.
+	 */
+	if (IsYugaByteEnabled())
+	{
+		bool is_active;
+		HandleYBStatus(YBCPgCheckIfPitrActive(&is_active));
+		if (is_active)
+			ereport(ERROR,
+					(errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
+					 errmsg("profile \"%s\" cannot be dropped. "
+							"Dropping profiles is not allowed on clusters "
+							"with Point in Time Restore activated.",
+							prfname)));
 	}
 
 	/* DROP hook for the profile being removed */
@@ -251,12 +315,22 @@ YbRemoveProfileById(Oid prfid)
 	/*
 	 * Remove the pg_yb_profile tuple
 	 */
-	CatalogTupleDelete(pg_profile_rel, tuple);
+	CatalogTupleDelete(rel, tuple);
 
 	heap_endscan(scandesc);
 
+	/*
+	 * Remove any comments or security labels on this tablespace.
+	 * TODO(profile): implement this if needed.
+	 */
+
+	/*
+	 * There is no owner to remove a shared dependency record for since
+	 * profiles are currently owned by any superuser or yb_db_admin.
+	 */
+
 	/* We keep the lock on pg_yb_profile until commit */
-	heap_close(pg_profile_rel, NoLock);
+	heap_close(rel, NoLock);
 }
 
 /************************

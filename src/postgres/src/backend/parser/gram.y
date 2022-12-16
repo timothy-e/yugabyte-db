@@ -312,7 +312,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 		CreateMatViewStmt RefreshMatViewStmt CreateAmStmt
 		CreatePublicationStmt AlterPublicationStmt
 		CreateSubscriptionStmt AlterSubscriptionStmt DropSubscriptionStmt
-		BackfillIndexStmt CreateProfileStmt
+		BackfillIndexStmt CreateProfileStmt DropProfileStmt
 
 %type <node>	select_no_parens select_with_parens select_clause
 				simple_select values_clause
@@ -941,6 +941,7 @@ stmt :
 			| DropOpFamilyStmt
 			| DropOwnedStmt
 			| DropPLangStmt
+			| DropProfileStmt
 			| DropRoleStmt
 			| DropStmt
 			| DropTableSpaceStmt
@@ -4875,6 +4876,49 @@ CreateProfileStmt: CREATE PROFILE name LIMIT FAILED_LOGIN_ATTEMPTS Iconst
 /*****************************************************************************
  *
  *		QUERY:
+ *             DROP PROFILE [IF EXISTS] name
+ *
+ *****************************************************************************/
+
+DropProfileStmt: DROP PROFILE name
+				{
+					if (!*YBCGetGFlags()->ysql_enable_profile)
+						parser_ybc_not_support(@1, "PROFILE");
+					DropProfileStmt *n = makeNode(DropProfileStmt);
+
+					n->prfname = $3;
+					if (strcmp(n->prfname, "default") == 0)
+						ereport(ERROR,
+								(errcode(ERRCODE_RESERVED_NAME),
+								 errmsg("profile name \"%s\" is reserved",
+										"default"),
+								 parser_errposition(@3)));
+
+					n->missing_ok = false;
+					$$ = (Node *) n;
+				}
+			|  DROP PROFILE IF_P EXISTS name
+				{
+					if (!*YBCGetGFlags()->ysql_enable_profile)
+						parser_ybc_not_support(@1, "PROFILE");
+					DropProfileStmt *n = makeNode(DropProfileStmt);
+
+					n->prfname = $5;
+					if (strcmp(n->prfname, "default") == 0)
+						ereport(ERROR,
+								(errcode(ERRCODE_RESERVED_NAME),
+								 errmsg("profile name \"%s\" is reserved",
+										"default"),
+								 parser_errposition(@3)));
+
+					n->missing_ok = true;
+					$$ = (Node *) n;
+				}
+		;
+
+/*****************************************************************************
+ *
+ *		QUERY:
  *             CREATE EXTENSION extension
  *             [ WITH ] [ SCHEMA schema ] [ VERSION version ] [ FROM oldversion ]
  *
@@ -6869,12 +6913,6 @@ drop_type_name:
 				{
 					parser_ybc_beta_feature(@1, "tablegroup", true);
 					$$ = OBJECT_YBTABLEGROUP;
-				}
-			| PROFILE
-				{
-					if (!*YBCGetGFlags()->ysql_enable_profile)
-						parser_ybc_not_support(@1, "PROFILE");
-					$$ = OBJECT_YBPROFILE;
 				}
 		;
 

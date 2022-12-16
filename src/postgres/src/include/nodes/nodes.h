@@ -523,7 +523,9 @@ typedef enum NodeTag
 	T_YbSeqScanState,
 	T_YbBatchedNestLoop,
 	T_YbBatchedNestLoopState,
-	T_CreateProfileStmt
+	/* TODO(profile): rename these to have Yb prefix */
+	T_CreateProfileStmt,
+	T_DropProfileStmt,
 
 } NodeTag;
 
