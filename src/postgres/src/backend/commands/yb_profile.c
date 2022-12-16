@@ -296,18 +296,15 @@ YbDropProfile(DropProfileStmt *stmt)
 	 * Check if there are snapshot schedules, disallow dropping in such cases.
 	 * TODO(profile): determine if this limitation is really needed.
 	 */
-	if (IsYugaByteEnabled())
-	{
-		bool is_active;
-		HandleYBStatus(YBCPgCheckIfPitrActive(&is_active));
-		if (is_active)
-			ereport(ERROR,
-					(errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
-					 errmsg("profile \"%s\" cannot be dropped. "
-							"Dropping profiles is not allowed on clusters "
-							"with Point in Time Restore activated.",
-							prfname)));
-	}
+	bool is_active;
+	HandleYBStatus(YBCPgCheckIfPitrActive(&is_active));
+	if (is_active)
+		ereport(ERROR,
+				(errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
+				 errmsg("profile \"%s\" cannot be dropped. "
+						"Dropping profiles is not allowed on clusters "
+						"with Point in Time Restore activated.",
+						prfname)));
 
 	/* DROP hook for the profile being removed */
 	InvokeObjectDropHook(YbProfileRelationId, prfid, 0);
