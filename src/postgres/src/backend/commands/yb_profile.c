@@ -678,8 +678,12 @@ YbMaybeIncFailedAttemptsAndDisableProfile(Oid roleid)
 	return rolprfstatus != ROLPRFSTATUS_OPEN;
 }
 
+/*
+ * Remove a role->profile association for the given roleid if the association
+ * exists.
+ */
 void
-YbRemoveRoleProfileForRole(Oid roleid)
+YbRemoveRoleProfileForRoleIfExists(Oid roleid)
 {
 	Relation	 rel;
 	HeapScanDesc scandesc;
@@ -693,10 +697,8 @@ YbRemoveRoleProfileForRole(Oid roleid)
 
 	/* We assume that there can be at most one matching tuple */
 	if (!HeapTupleIsValid(rolprftuple))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("role with oid \"%d\" is not associated with a profile",
-						roleid)));
+		/* Role is not associated with a profile. */
+		return;
 	Oid roleprfid = HeapTupleGetOid(rolprftuple);
 
 	/*

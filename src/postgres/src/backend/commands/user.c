@@ -783,7 +783,7 @@ AlterRole(AlterRoleStmt *stmt)
 		else
 		{
 			Assert(dnoprofile);
-			YbRemoveRoleProfileForRole(roleid);
+			YbRemoveRoleProfileForRoleIfExists(roleid);
 		}
 
 		ReleaseSysCache(tuple);
@@ -1146,7 +1146,7 @@ DropRole(DropRoleStmt *stmt)
 		/*
 		 * If the role is attached to a profile, auto-remove that association.
 		 */
-		YbRemoveRoleProfileForRole(roleid);
+		YbRemoveRoleProfileForRoleIfExists(roleid);
 
 		/*
 		 * Remove the role from the pg_authid table
