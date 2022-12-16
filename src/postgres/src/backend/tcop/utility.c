@@ -571,18 +571,6 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 			AlterTableSpaceOptions((AlterTableSpaceOptionsStmt *) parsetree);
 			break;
 
-		/* TODO(profile): move these YB cases to separate block. */
-		case T_YbCreateProfileStmt:
-			PreventInTransactionBlock(isTopLevel, "CREATE PROFILE");
-			YbCreateProfile((YbCreateProfileStmt *) parsetree);
-			break;
-
-		case T_YbDropProfileStmt:
-			/* no event triggers for global objects */
-			PreventInTransactionBlock(isTopLevel, "DROP PROFILE");
-			YbDropProfile((YbDropProfileStmt *) parsetree);
-			break;
-
 		case T_TruncateStmt:
 			ExecuteTruncate((TruncateStmt *) parsetree);
 			break;
@@ -972,6 +960,17 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 					ExecSecLabelStmt(stmt);
 				break;
 			}
+
+		case T_YbCreateProfileStmt:
+			PreventInTransactionBlock(isTopLevel, "CREATE PROFILE");
+			YbCreateProfile((YbCreateProfileStmt *) parsetree);
+			break;
+
+		case T_YbDropProfileStmt:
+			/* no event triggers for global objects */
+			PreventInTransactionBlock(isTopLevel, "DROP PROFILE");
+			YbDropProfile((YbDropProfileStmt *) parsetree);
+			break;
 
 		default:
 			/* All other statement types have event trigger support */
@@ -2903,15 +2902,6 @@ CreateCommandTag(Node *parsetree)
 			tag = "ALTER COLLATION";
 			break;
 
-		/* TODO(profile): move these YB cases to separate block. */
-		case T_YbCreateProfileStmt:
-			tag = "CREATE PROFILE";
-			break;
-
-		case T_YbDropProfileStmt:
-			tag = "DROP PROFILE";
-			break;
-
 		case T_PrepareStmt:
 			tag = "PREPARE";
 			break;
@@ -3053,6 +3043,14 @@ CreateCommandTag(Node *parsetree)
 						break;
 				}
 			}
+			break;
+
+		case T_YbCreateProfileStmt:
+			tag = "CREATE PROFILE";
+			break;
+
+		case T_YbDropProfileStmt:
+			tag = "DROP PROFILE";
 			break;
 
 		default:
