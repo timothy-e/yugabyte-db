@@ -316,11 +316,6 @@ YbDropProfile(YbDropProfileStmt *stmt)
 	heap_endscan(scandesc);
 
 	/*
-	 * Remove any comments or security labels on this profile.
-	 * TODO(profile): implement this if needed.
-	 */
-
-	/*
 	 * There is no owner to remove a shared dependency record for since
 	 * profiles are currently owned by any superuser or yb_db_admin.
 	 */
