@@ -783,7 +783,7 @@ AlterRole(AlterRoleStmt *stmt)
 												 : ROLPRFSTATUS_OPEN);
 		}
 		else
-			YbRemoveRoleProfileForRole(roleid, rolename);
+			YbRemoveRoleProfileForRole(roleid);
 
 		ReleaseSysCache(tuple);
 		heap_close(pg_authid_rel, NoLock);
@@ -1141,6 +1141,11 @@ DropRole(DropRoleStmt *stmt)
 					 errdetail_internal("%s", detail),
 					 errdetail_log("%s", detail_log)));
 		}
+
+		/*
+		 * If the role is attached to a profile, auto-remove that association.
+		 */
+		YbRemoveRoleProfileForRole(roleid);
 
 		/*
 		 * Remove the role from the pg_authid table

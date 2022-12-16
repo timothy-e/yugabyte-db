@@ -683,7 +683,7 @@ YbMaybeIncFailedAttemptsAndDisableProfile(Oid roleid)
 }
 
 void
-YbRemoveRoleProfileForRole(Oid roleid, const char *rolename)
+YbRemoveRoleProfileForRole(Oid roleid)
 {
 	/* TODO(profile): remove pg_yb_role_profile row */
 
