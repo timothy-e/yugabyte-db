@@ -73,6 +73,7 @@
 /* YB includes. */
 #include "catalog/pg_yb_profile_d.h"
 #include "catalog/pg_yb_role_profile_d.h"
+#include "commands/yb_profile.h"
 #include "pg_yb_utils.h"
 
 typedef enum
@@ -411,6 +412,35 @@ changeDependencyOnTablespace(Oid classId, Oid objectId, Oid newTablespaceId)
 					   classId, objectId, 0,
 					   TableSpaceRelationId, newTablespaceId,
 					   SHARED_DEPENDENCY_TABLESPACE);
+	else
+		shdepDropDependency(sdepRel,
+							classId, objectId, 0, true,
+							InvalidOid, InvalidOid,
+							SHARED_DEPENDENCY_INVALID);
+
+	heap_close(sdepRel, RowExclusiveLock);
+}
+
+/*
+ * changeDependencyOnProfile
+ *
+ * Update the shared dependencies to account for the new profile.
+ *
+ * Note: we don't need an objsubid argument because only whole objects
+ * have tablespaces.
+ */
+void
+changeDependencyOnProfile(Oid classId, Oid objectId, Oid newProfileId)
+{
+	Relation	sdepRel;
+
+	sdepRel = heap_open(SharedDependRelationId, RowExclusiveLock);
+
+	if (newProfileId != InvalidOid)
+		shdepChangeDep(sdepRel,
+					   classId, objectId, 0,
+					   YbProfileRelationId, newProfileId,
+					   SHARED_DEPENDENCY_PROFILE);
 	else
 		shdepDropDependency(sdepRel,
 							classId, objectId, 0, true,
@@ -1108,6 +1138,19 @@ shdepLockAndCheckObject(Oid classId, Oid objectId)
 				break;
 			}
 
+		case YbProfileRelationId:
+			{
+				/* For lack of a syscache on yb_pg_profile, do this: */
+				char	   *profile = get_profile_name(objectId);
+
+				if (profile == NULL)
+					ereport(ERROR,
+							(errcode(ERRCODE_UNDEFINED_OBJECT),
+							 errmsg("profile %u was concurrently dropped",
+									objectId)));
+				pfree(profile);
+				break;
+			}
 
 		default:
 			elog(ERROR, "unrecognized shared classId: %u", classId);

@@ -344,6 +344,8 @@ Oid
 create_role_profile_map(Oid roleid, Oid prfid)
 {
 	Relation  rel;
+	ObjectAddress myself;
+	ObjectAddress referenced;
 	Datum	  values[Natts_pg_yb_role_profile];
 	bool	  nulls[Natts_pg_yb_role_profile];
 	HeapTuple tuple;
@@ -369,23 +371,16 @@ create_role_profile_map(Oid roleid, Oid prfid)
 
 	roleprfid = CatalogTupleInsert(rel, tuple);
 
-	// Record dependencies on profile and role
-	ObjectAddress myself, profile, auth;
-
-	myself.classId = YbRoleProfileRelationId;
-	myself.objectId = roleprfid;
+	myself.classId = AuthIdRelationId;
+	myself.objectId = roleid;
 	myself.objectSubId = 0;
 
-	auth.classId = AuthIdRelationId;
-	auth.objectId = roleid;
-	auth.objectSubId = 0;
+	/* Record dependency on profile */
+	referenced.classId = YbProfileRelationId;
+	referenced.objectId = prfid;
+	referenced.objectSubId = 0;
 
-	profile.classId = YbProfileRelationId;
-	profile.objectId = prfid;
-	profile.objectSubId = 0;
-
-	recordSharedDependencyOn(&myself, &auth, SHARED_DEPENDENCY_PROFILE);
-	recordDependencyOn(&myself, &profile, DEPENDENCY_NORMAL);
+	recordSharedDependencyOn(&myself, &referenced, SHARED_DEPENDENCY_PROFILE);
 
 	heap_freetuple(tuple);
 
@@ -456,36 +451,6 @@ get_role_profile_tuple_by_oid(Oid rolprfoid)
 }
 
 /*
- * get_role_profile_oid - given a role oid, return the oid of the row in
- * pg_yb_role_profile for that role.
- *
- * If missing_ok is false, throw an error if role profile is not found.
- * If true, just return InvalidOid.
- */
-static Oid
-get_role_profile_oid(Oid roleid, const char *rolename, bool missing_ok)
-{
-	Oid			 result;
-	HeapTuple	 tuple;
-
-	tuple = get_role_profile_tuple_by_role_oid(roleid);
-
-	/* We assume that there can be at most one matching tuple */
-	if (HeapTupleIsValid(tuple))
-		result = HeapTupleGetOid(tuple);
-	else
-		result = InvalidOid;
-
-	if (!OidIsValid(result) && !missing_ok)
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("role \"%s\" is not associated with a profile",
-						rolename)));
-
-	return result;
-}
-
-/*
  * update_role_profile: Utility fn. to update a row in pg_yb_role_profile
  *
  * roleid: OID of the role
@@ -551,8 +516,7 @@ YbCreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 {
 	HeapTuple tuple;
 	Form_pg_yb_role_profile rolprfform;
-	Oid currentprfid;
-	Oid rolprfid;
+	Oid		oldprfid;
 
 	/* Must be super user or yb_db_admin role */
 	if (!superuser() && !IsYbDbAdminUser(GetUserId()))
@@ -581,12 +545,11 @@ YbCreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 		return;
 	}
 
-	rolprfid = HeapTupleGetOid(tuple);
 	rolprfform = (Form_pg_yb_role_profile) GETSTRUCT(tuple);
-	currentprfid = rolprfform->rolprfprofile;
+	oldprfid = rolprfform->rolprfprofile;
 
 	// Check if the role is already mapped to the same profile.
-	if (currentprfid == prfid)
+	if (oldprfid == prfid)
 	{
 		elog(WARNING, "role \"%s\" is already associated with profile \"%s\"",
 			 rolename, prfname);
@@ -611,9 +574,8 @@ YbCreateRoleProfile(Oid roleid, const char *rolename, const char *prfname)
 						new_record_repl, false);
 
 	// Change the dependency to the new profile
-	changeDependencyFor(YbRoleProfileRelationId, rolprfid,
-						YbProfileRelationId, currentprfid, prfid);
-	return;
+	changeDependencyFor(AuthIdRelationId, roleid,
+						YbProfileRelationId, oldprfid, prfid);
 }
 
 /*
@@ -735,13 +697,10 @@ YbMaybeIncFailedAttemptsAndDisableProfile(Oid roleid)
 void
 YbRemoveRoleProfileForRole(Oid roleid, const char *rolename)
 {
-	Oid roleprfoid;
 	ObjectAddress myself;
 
-	roleprfoid = get_role_profile_oid(roleid, rolename, false);
-
-	myself.classId = YbRoleProfileRelationId;
-	myself.objectId = roleprfoid;
+	myself.classId = AuthIdRelationId;
+	myself.objectId = roleid;
 	myself.objectSubId = 0;
 
 	performDeletion(&myself, DROP_RESTRICT, 0);
