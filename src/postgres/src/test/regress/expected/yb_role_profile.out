@@ -70,36 +70,10 @@ SELECT count(*) FROM pg_yb_role_profile;
      1
 (1 row)
 
--- One row in pg_shdepend for the role profile
-SELECT count(*) FROM pg_shdepend shdep
-                JOIN pg_yb_role_profile rpf on rpf.oid = shdep.objid
-                WHERE shdep.deptype = 'f';
- count
--------
-     1
-(1 row)
-
 -- One row in pg_shdepend for the role
 SELECT count(*) FROM pg_shdepend shdep
-                JOIN pg_roles rol on rol.oid = shdep.refobjid
+                JOIN pg_roles rol on rol.oid = shdep.objid
                 WHERE shdep.deptype = 'f' and rol.rolname = 'restricted_user';
- count
--------
-     1
-(1 row)
-
--- One row in pg_depend for the role profile
-SELECT count(*) FROM pg_depend dep
-                JOIN pg_yb_role_profile rpf on rpf.oid = dep.objid;
- count
--------
-     1
-(1 row)
-
--- One row in pg_depend for the profile
-SELECT count(*) FROM pg_depend dep
-                JOIN pg_yb_profile prf on prf.oid = dep.refobjid
-                WHERE prf.prfname = 'test_profile';
  count
 -------
      1
@@ -139,13 +113,8 @@ ALTER USER restricted_user PROFILE test_profile;
 WARNING:  role "restricted_user" is already associated with profile "test_profile"
 -- fail: Cannot drop a profile that has a role associated with it
 DROP PROFILE test_profile;
-ERROR:  cannot drop profile test_profile because other objects depend on it
-DETAIL:  association between role "restricted_user" and profile test_profile depends on profile test_profile
-HINT:  Use DROP ... CASCADE to drop the dependent objects too.
--- A role/user cannot be dropped because there is mapping to profile.
-DROP USER restricted_user;
-ERROR:  role "restricted_user" cannot be dropped because some objects depend on it
-DETAIL:  association between role "restricted_user" and profile test_profile
+ERROR:  profile "test_profile" cannot be dropped because some objects depend on it
+DETAIL:  profile of role restricted_user
 -- Remove the association of a role to a profile
 ALTER USER restricted_user NOPROFILE;
 SELECT rolprfstatus, rolprffailedloginattempts, rolname, prfname FROM
@@ -165,42 +134,16 @@ SELECT count(*) FROM pg_yb_role_profile;
      0
 (1 row)
 
--- pg_shdepend for the role profile
-SELECT count(*) FROM pg_shdepend shdep
-                JOIN pg_yb_role_profile rpf on rpf.oid = shdep.objid
-                WHERE shdep.deptype = 'f';
- count
--------
-     0
-(1 row)
-
 -- pg_shdepend for the role
 SELECT count(*) FROM pg_shdepend shdep
-                JOIN pg_roles rol on rol.oid = shdep.refobjid
+                JOIN pg_roles rol on rol.oid = shdep.objid
                 WHERE shdep.deptype = 'f' and rol.rolname = 'restricted_user';
  count
 -------
      0
 (1 row)
 
--- pg_depend for the role profile
-SELECT count(*) FROM pg_depend dep
-                JOIN pg_yb_role_profile rpf on rpf.oid = dep.objid;
- count
--------
-     0
-(1 row)
-
--- pg_depend for the profile
-SELECT count(*) FROM pg_depend dep
-                JOIN pg_yb_profile prf on prf.oid = dep.refobjid
-                WHERE prf.prfname = 'test_profile';
- count
--------
-     0
-(1 row)
-
--- Can drop user as it is not attached to a profile. After dropping the user there should be 0 rows
+-- Can drop user as it removes dependencies automatically.
 DROP USER restricted_user;
 SELECT count(*) FROM pg_yb_role_profile;
  count

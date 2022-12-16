@@ -697,8 +697,11 @@ YbRemoveRoleProfileForRoleIfExists(Oid roleid)
 
 	/* We assume that there can be at most one matching tuple */
 	if (!HeapTupleIsValid(rolprftuple))
+	{
 		/* Role is not associated with a profile. */
+		heap_close(rel, NoLock);
 		return;
+	}
 	Oid roleprfid = HeapTupleGetOid(rolprftuple);
 
 	/*
