@@ -4082,6 +4082,16 @@ _copyCreateProfileStmt(const CreateProfileStmt *from)
 	return newnode;
 }
 
+static DropProfileStmt *
+_copyDropProfileStmt(const DropProfileStmt *from)
+{
+	DropProfileStmt *newnode = makeNode(DropProfileStmt);
+
+	COPY_STRING_FIELD(prfname);
+	COPY_SCALAR_FIELD(missing_ok);
+	return newnode;
+}
+
 static CreateTableGroupStmt *
 _copyCreateTableGroupStmt(const CreateTableGroupStmt *from)
 {
@@ -5523,6 +5533,9 @@ copyObjectImpl(const void *from)
 			break;
 		case T_CreateProfileStmt:
 			retval = _copyCreateProfileStmt(from);
+			break;
+		case T_DropProfileStmt:
+			retval = _copyDropProfileStmt(from);
 			break;
 		case T_CreateTableGroupStmt:
 			retval = _copyCreateTableGroupStmt(from);

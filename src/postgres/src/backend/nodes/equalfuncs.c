@@ -1802,6 +1802,14 @@ _equalCreateProfileStmt(const CreateProfileStmt *a, const CreateProfileStmt *b)
 }
 
 static bool
+_equalDropProfileStmt(const DropProfileStmt *a, const DropProfileStmt *b)
+{
+	COMPARE_STRING_FIELD(prfname);
+	COMPARE_SCALAR_FIELD(missing_ok);
+	return true;
+}
+
+static bool
 _equalCreateTableGroupStmt(const CreateTableGroupStmt *a, const CreateTableGroupStmt *b)
 {
 	COMPARE_STRING_FIELD(tablegroupname);
@@ -3490,6 +3498,9 @@ equal(const void *a, const void *b)
 			break;
 		case T_CreateProfileStmt:
 			retval = _equalCreateProfileStmt(a, b);
+			break;
+		case T_DropProfileStmt:
+			retval = _equalDropProfileStmt(a, b);
 			break;
 		case T_CreateTableGroupStmt:
 			retval = _equalCreateTableGroupStmt(a, b);
