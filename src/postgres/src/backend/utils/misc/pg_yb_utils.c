@@ -1465,6 +1465,7 @@ bool IsTransactionalDdlStatement(PlannedStmt *pstmt,
 
 		// All T_Drop... tags from nodes.h:
 		case T_DropOwnedStmt:
+		case T_DropProfileStmt:
 		case T_DropReplicationSlotCmd:
 		case T_DropRoleStmt:
 		case T_DropSubscriptionStmt:
