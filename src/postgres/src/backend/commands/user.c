@@ -1146,7 +1146,8 @@ DropRole(DropRoleStmt *stmt)
 		/*
 		 * If the role is attached to a profile, auto-remove that association.
 		 */
-		YbRemoveRoleProfileForRoleIfExists(roleid);
+		if (*YBCGetGFlags()->ysql_enable_profile && YbLoginProfileCatalogsExist)
+			YbRemoveRoleProfileForRoleIfExists(roleid);
 
 		/*
 		 * Remove the role from the pg_authid table
