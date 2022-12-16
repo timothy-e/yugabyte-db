@@ -699,7 +699,7 @@ YbRemoveRoleProfileForRole(Oid roleid)
 	if (!HeapTupleIsValid(rolprftuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("role \"%d\" is not associated with a profile",
+				 errmsg("role with oid \"%d\" is not associated with a profile",
 						roleid)));
 	Oid roleprfid = HeapTupleGetOid(rolprftuple);
 
