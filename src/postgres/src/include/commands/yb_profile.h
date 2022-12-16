@@ -46,6 +46,5 @@ extern HeapTuple get_role_profile_tuple_by_role_oid(Oid roleid);
 extern HeapTuple get_role_profile_tuple_by_oid(Oid rolprfid);
 
 extern void YbRemoveRoleProfileForRole(Oid roleid);
-extern void YbRemoveRoleProfileById(Oid roleprfid);
 
 #endif /* YB_PROFILE_H */

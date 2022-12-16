@@ -685,25 +685,6 @@ YbMaybeIncFailedAttemptsAndDisableProfile(Oid roleid)
 void
 YbRemoveRoleProfileForRole(Oid roleid)
 {
-	/* TODO(profile): remove pg_yb_role_profile row */
-
-	/*
-	 * TODO(profile): check that this deletes only role->profile pg_shdepend
-	 * record.  Assumption right now is that that is the only record that
-	 * exists where objid=role.  To be safe, it is probably best to make (or
-	 * find) a function to delete the specific role->profile dependency record.
-	 */
-	deleteSharedDependencyRecordsFor(AuthIdRelationId, roleid, 0);
-}
-
-/*
- * YbRemoveRoleProfileById - detach a role from profile.
- *
- * roleprfid - the oid of the role_profile entry.
- */
-void
-YbRemoveRoleProfileById(Oid roleprfid)
-{
 	Relation	 rel;
 	HeapScanDesc scandesc;
 	ScanKeyData	 skey[1];
@@ -712,6 +693,15 @@ YbRemoveRoleProfileById(Oid roleprfid)
 	CheckProfileCatalogsExist();
 
 	rel = heap_open(YbRoleProfileRelationId, RowExclusiveLock);
+	HeapTuple rolprftuple = get_role_profile_tuple_by_role_oid(roleid);
+
+	/* We assume that there can be at most one matching tuple */
+	if (!HeapTupleIsValid(rolprftuple))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("role \"%d\" is not associated with a profile",
+						roleid)));
+	Oid roleprfid = HeapTupleGetOid(rolprftuple);
 
 	/*
 	 * Find the profile to delete.
@@ -734,4 +724,12 @@ YbRemoveRoleProfileById(Oid roleprfid)
 
 	heap_endscan(scandesc);
 	heap_close(rel, NoLock);
+
+	/*
+	 * TODO(profile): check that this deletes only role->profile pg_shdepend
+	 * record.  Assumption right now is that that is the only record that
+	 * exists where objid=role.  To be safe, it is probably best to make (or
+	 * find) a function to delete the specific role->profile dependency record.
+	 */
+	deleteSharedDependencyRecordsFor(AuthIdRelationId, roleid, 0);
 }
