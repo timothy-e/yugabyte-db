@@ -277,7 +277,7 @@ YbDropProfile(DropProfileStmt *stmt)
 	 * default profile.
 	 */
 
-	/* Check for pg_shdepend entries depending on this tablespace */
+	/* Check for pg_shdepend entries depending on this profile */
 	if (checkSharedDependencies(YbProfileRelationId, prfid,
 								&detail, &detail_log))
 	{
@@ -320,7 +320,7 @@ YbDropProfile(DropProfileStmt *stmt)
 	heap_endscan(scandesc);
 
 	/*
-	 * Remove any comments or security labels on this tablespace.
+	 * Remove any comments or security labels on this profile.
 	 * TODO(profile): implement this if needed.
 	 */
 
