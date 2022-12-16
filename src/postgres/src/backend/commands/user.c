@@ -781,7 +781,10 @@ AlterRole(AlterRoleStmt *stmt)
 								   unlocked == 0 ? ROLPRFSTATUS_LOCKED
 												 : ROLPRFSTATUS_OPEN);
 		else
+		{
+			Assert(dnoprofile);
 			YbRemoveRoleProfileForRole(roleid);
+		}
 
 		ReleaseSysCache(tuple);
 		heap_close(pg_authid_rel, NoLock);
