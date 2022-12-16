@@ -340,7 +340,7 @@ YbDropProfile(DropProfileStmt *stmt)
 /*
  * Create a new map between role & profile.
  */
-Oid
+static Oid
 create_role_profile_map(Oid roleid, Oid prfid)
 {
 	Relation  rel;
