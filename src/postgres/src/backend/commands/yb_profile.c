@@ -301,10 +301,9 @@ YbDropProfile(DropProfileStmt *stmt)
 	if (is_active)
 		ereport(ERROR,
 				(errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
-				 errmsg("profile \"%s\" cannot be dropped. "
-						"Dropping profiles is not allowed on clusters "
-						"with Point in Time Restore activated.",
-						prfname)));
+				 errmsg("profile \"%s\" cannot be dropped", prfname),
+				 errdetail("Dropping profiles is not allowed on clusters "
+						   "with Point in Time Restore activated.")));
 
 	/* DROP hook for the profile being removed */
 	InvokeObjectDropHook(YbProfileRelationId, prfid, 0);
